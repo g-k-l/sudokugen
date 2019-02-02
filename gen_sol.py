@@ -4,6 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 import math
 import sqlite3
+import sys
 
 import numpy as np
 from numpy.random import shuffle
@@ -36,10 +37,10 @@ class Board(object):
         self.finished = False
 
 
-def is_filled(positions):
-    if positions:
-        return False
-    return True
+def is_filled(board):
+    if np.count_nonzero(board) == BOARD_DIM**2:
+        return True
+    return False
 
 
 def process_solution(bc):
@@ -96,7 +97,7 @@ def construct_candidates(board, x, y):
     # print(board)
     # print("x: ", x)
     # print("y: ", y)
-    print(possible_from_col & possible_from_row & possible_from_square)
+    # print(possible_from_col & possible_from_row & possible_from_square)
     return possible_from_col & possible_from_row & possible_from_square
 
 
@@ -121,24 +122,35 @@ def construct_candidates(board, x, y):
 
 
 def get_unfilled_cell_rand(board):
-    while True:
-        x = np.random.randint(9)
-        y = np.random.randint(9)
-        if board[x, y] == 0:
-            return x, y
+    zero_indices = np.argwhere(board == 0)
+    if len(zero_indices) > 0:
+        cell_index = np.random.randint(len(zero_indices))
+    else:
+        cell_index = zero_indices[0]
+    x, y = zero_indices[cell_index]
+    return x, y
+
+    # while True:
+    #     x = np.random.randint(9)
+    #     y = np.random.randint(9)
+    #     if board[x, y] == 0:
+    #         return x, y
 
 
 def backtrack_iter(board):
     stack = [board]
     while True:
-        if not stack:
+        if is_filled(board):
             return board
         board = stack.pop()
         x, y = get_unfilled_cell_rand(board)
-        # print("# filled: ", np.count_nonzero(board))
+        sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+        sys.stdout.flush()
+        if np.count_nonzero(board) > 75:
+            print(board)
 
         candidates = construct_candidates(board, x, y)
-        print(candidates)
+        # print(candidates)
         for candidate in candidates:
             copied = board.copy()
             copied[x, y] = candidate
