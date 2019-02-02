@@ -47,8 +47,9 @@ def is_filled(board):
 def process_solution(board):
     """INSERT the generated solutions to db"""
     c = conn.cursor()
-    c.execute("INSERT INTO solutions VALUES {};".format(
-        tuple(board.flatten())))
+    columns = ", ".join(['"{}"'.format(n) for n in range(81)])
+    c.execute("INSERT INTO solutions ({}) VALUES {};".format(
+        columns, tuple(board.flatten())))
     conn.commit()
     return board
 
