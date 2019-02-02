@@ -18,7 +18,6 @@ def setup_db(conn):
 
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS solutions (
-        id SERIAL PRIMARY KEY,
         {});""".format(columns))
     conn.commit()
 
