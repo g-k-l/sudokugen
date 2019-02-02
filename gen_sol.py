@@ -132,12 +132,47 @@ def propagate_constraint(board):
     return board
 
 
-def backtrack_iter(board):
+def backtrack_iter(board, check_unique=False):
     stack = [board]
     while True:
-        board = stack.pop()
         if is_filled(board):
             return process_solution(board)
+        x, y = get_unfilled_cell_rand(board)
+        sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+        sys.stdout.flush()
+
+        candidates = construct_candidates(board, x, y)
+        for candidate in candidates:
+            copied = board.copy()
+            copied[x, y] = candidate
+            copied = propagate_constraint(copied)
+            stack.append(copied)
+
+
+def board_in_solutions(board, solutions):
+    for sol in solutions:
+        if board == sol:
+            return True
+    return False
+
+
+def solution_unique(board):
+    """Like backtrack_iter, but its main purpose is to
+        check for uniqueness of generated puzzles from
+        solutions"""
+    stack, solutions = [board], []
+    while True:
+        try:
+            board = stack.pop()
+        except IndexError:
+            if len(solutions) == 1:
+                return True
+            return False
+        if is_filled(board) and not board_in_solutions(board, solutions):
+            solutions.append(board)
+            if len(solutions) > 1:
+                return False
+            continue
         x, y = get_unfilled_cell_rand(board)
         sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
         sys.stdout.flush()
@@ -158,7 +193,7 @@ def prefill_diagonals(board):
     """
     groups, __ = squares()
     for n in (0, 4, 8):
-        arr = np.array(range(1, 10))
+        arr = np.arange(1, 10)
         np.random.shuffle(arr)
         for (x, y), k in zip(groups[n], arr):
             board[x, y] = k
