@@ -173,9 +173,9 @@ if __name__ == "__main__":
     except (IndexError, ValueError):
         n_jobs = 1
 
-    starting_boards = [
+    starting_boards = (
         prefill_diagonals(np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
-        for __ in range(n_jobs)]
+        for __ in range(n_jobs))
 
     with ProcessPoolExecutor() as executor:
         for result in executor.map(backtrack_iter, starting_boards):
