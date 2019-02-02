@@ -1,3 +1,8 @@
+"""
+This file contains a backtracking
+sudoku solver for generating fully
+-populated puzzles.
+"""
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -12,6 +17,10 @@ conn = sqlite3.connect('sudoku.db')
 
 
 def setup_db(conn):
+    """
+    Creates a table "solutions" to store
+    generated solutions.
+    """
     template = '"{}" integer,'
     columns = "\n".join(
         [template.format(n) for n in range(80)] + ['"80" integer'])
@@ -36,6 +45,7 @@ def is_filled(board):
 
 
 def process_solution(board):
+    """INSERT the generated solutions to db"""
     c = conn.cursor()
     c.execute("INSERT INTO solutions VALUES {};".format(
         tuple(board.flatten())))
@@ -44,6 +54,12 @@ def process_solution(board):
 
 
 def squares():
+    """
+    Generates "groups" which is a dictionary
+    grouping sudoku puzzle indices belonging
+    to the same square. Also generates the
+    reverse lookup "lookup" from index to group.
+    """
     groups = defaultdict(set)
     lookup = defaultdict(int)
     data = [
@@ -77,6 +93,9 @@ def choices_from_square(board, x, y):
 
 
 def construct_candidates(board, x, y):
+    """
+    Get eligible candidates for the cell at (x, y)
+    """
     possible_from_row = COMPLETE_ROW - set(board[x, :])
     possible_from_col = COMPLETE_ROW - set(board[:, y])
     possible_from_square = choices_from_square(board, x, y)
@@ -100,6 +119,9 @@ def get_unfilled_cell_rand(board):
 
 
 def propagate_constraint(board):
+    """Fill out squares for which there is only
+        one choice remaining after applying the
+        previous guess"""
     x_matrix, y_matrix = np.indices((9, 9))
     for x_arr, y_arr in zip(x_matrix, y_matrix):
         for x, y in zip(x_arr, y_arr):
