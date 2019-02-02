@@ -145,13 +145,15 @@ def prefill_diagonals(board):
 if __name__ == "__main__":
     setup_db(conn)
 
-    n_jobs = 1
-    n_workers = 1
+    try:
+        n_jobs = int(sys.argv[1])
+    except (IndexError, ValueError):
+        n_jobs = 1
 
     starting_boards = [
         prefill_diagonals(np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
         for __ in range(n_jobs)]
 
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+    with ProcessPoolExecutor() as executor:
         for result in executor.map(backtrack_iter, starting_boards):
             print(result)
