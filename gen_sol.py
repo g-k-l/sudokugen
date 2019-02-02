@@ -100,24 +100,47 @@ def get_unfilled_cell_rand(board):
     return x, y
 
 
+def propagate_constraint(board):
+    x_matrix, y_matrix = np.indices((9, 9))
+    for x_arr, y_arr in zip(x_matrix, y_matrix):
+        for x, y in zip(x_arr, y_arr):
+            candidates = construct_candidates(board, x, y)
+            if len(candidates) == 1:
+                board[x, y] = candidates.pop()
+    return board
+
+
 def backtrack_iter(board):
     stack = [board]
     while True:
+        board = stack.pop()
         if is_filled(board):
             return process_solution(board)
-        board = stack.pop()
         x, y = get_unfilled_cell_rand(board)
         sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
         sys.stdout.flush()
-        if np.count_nonzero(board) > 75:
-            print(board)
 
         candidates = construct_candidates(board, x, y)
-        # print(candidates)
         for candidate in candidates:
             copied = board.copy()
             copied[x, y] = candidate
+            copied = propagate_constraint(copied)
             stack.append(copied)
+
+
+def prefill_diagonals(board):
+    """
+    Fill the diagonal squares (groups 0, 4, 8)
+    first prior to backtracking to reduce the
+    problem space.
+    """
+    groups, __ = squares()
+    for n in (0, 4, 8):
+        arr = np.array(range(1, 10))
+        np.random.shuffle(arr)
+        for (x, y), k in zip(groups[n], arr):
+            board[x, y] = k
+    return board
 
 
 if __name__ == "__main__":
@@ -127,11 +150,9 @@ if __name__ == "__main__":
     n_workers = 1
 
     starting_boards = [
-        np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int) for __ in range(n_jobs)]
-
-    # print(backtrack_iter(starting_boards[0].board))
+        prefill_diagonals(np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
+        for __ in range(n_jobs)]
 
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
         for result in executor.map(backtrack_iter, starting_boards):
-            # TODO: anything important to do here?
             print(result)
