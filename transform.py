@@ -43,7 +43,7 @@ def shuffle_numbers(board):
     each number to a different number.
     """
     num_map = np.arange(BOARD_DIM)
-    np.random.shuffle(np.arange(BOARD_DIM))
+    np.random.shuffle(num_map)
     copy = -board
     for i, n in enumerate(num_map):
         copy[copy == -(i+1)] = n + 1
