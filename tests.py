@@ -56,30 +56,13 @@ def test_squares_choices():
 
 
 def test_get_unfilled_cell():
-    board = np.array(
-      [[1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 0, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1]])
+    board = np.full((BOARD_DIM, BOARD_DIM), 1)
+    board[2, 2] = 0
     assert gen_sol.get_unfilled_cell_rand(board) == (2, 2)
 
 
 def test_get_unfilled_cell_all_filled():
-    board = np.array(
-      [[1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-       [1, 1, 1, 1, 1, 1, 1, 1, 1]])
+    board = np.full((BOARD_DIM, BOARD_DIM), 1)
     with pytest.raises(IndexError):
         gen_sol.get_unfilled_cell_rand(board)
 
