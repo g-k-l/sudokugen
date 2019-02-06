@@ -140,12 +140,12 @@ def propagate_constraint(board):
     return board
 
 
-def backtrack_iter(board, check_unique=False):
+def backtrack_iter(board):
     stack = [board]
     while True:
         board = stack.pop()
         if is_filled(board):
-            return process_solution(board)
+            return board
         x, y = get_unfilled_cell_rand(board)
         sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
         sys.stdout.flush()
@@ -223,4 +223,4 @@ if __name__ == "__main__":
 
     with ProcessPoolExecutor() as executor:
         for result in executor.map(backtrack_iter, starting_boards):
-            print(result)
+            process_solution(result)

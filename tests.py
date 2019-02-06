@@ -61,6 +61,13 @@ def test_get_unfilled_cell_all_filled():
         gen_sol.get_unfilled_cell_rand(board)
 
 
+def test_backtrack_iter():
+    board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
+    sol = gen_sol.backtrack_iter(board)
+    assert len(np.argwhere(sol == 0)) == 0
+    assert_board_is_valid(sol)
+
+
 def test_x_translate():
     pass
 
