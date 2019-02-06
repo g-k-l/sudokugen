@@ -1,6 +1,9 @@
 
 import numpy as np
+import pytest
+
 import gen_sol
+import transform
 
 
 def test_squares_group():
@@ -41,3 +44,38 @@ def test_get_unfilled_cell():
        [1, 1, 1, 1, 1, 1, 1, 1, 1],
        [1, 1, 1, 1, 1, 1, 1, 1, 1]])
     assert gen_sol.get_unfilled_cell_rand(board) == (2, 2)
+
+
+def test_get_unfilled_cell_all_filled():
+    board = np.array(
+      [[1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1],
+       [1, 1, 1, 1, 1, 1, 1, 1, 1]])
+    with pytest.raises(IndexError):
+        gen_sol.get_unfilled_cell_rand(board)
+
+
+def test_x_translate():
+    pass
+
+
+def test_y_translate():
+    pass
+
+
+def test_rotate():
+    pass
+
+
+def test_mirror():
+    pass
+
+
+def test_shuff_numbers():
+    pass

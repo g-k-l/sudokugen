@@ -114,7 +114,7 @@ def get_unfilled_cell_rand(board):
     if len(zero_indices) > 0:
         cell_index = np.random.randint(len(zero_indices))
     else:
-        cell_index = zero_indices[0]
+        raise IndexError("No unfilled cell remaining!")
     x, y = zero_indices[cell_index]
     return x, y
 
