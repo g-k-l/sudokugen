@@ -177,8 +177,9 @@ def solution_unique(board):
             if len(solutions) == 1:
                 return True
             return False
-        if is_filled(board) and not board_in_solutions(board, solutions):
-            solutions.append(board)
+        if is_filled(board):
+            if not board_in_solutions(board, solutions):
+                solutions.append(board)
             if len(solutions) > 1:
                 return False
             continue
