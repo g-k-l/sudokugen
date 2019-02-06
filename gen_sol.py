@@ -160,7 +160,7 @@ def backtrack_iter(board):
 
 def board_in_solutions(board, solutions):
     for sol in solutions:
-        if board == sol:
+        if np.all(np.equal(board, sol)):
             return True
     return False
 
