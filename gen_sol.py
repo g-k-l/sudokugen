@@ -33,6 +33,19 @@ def setup_db(conn):
     conn.commit()
 
 
+def group_blocks():
+    side = int(math.sqrt(BOARD_DIM))
+    shape = (side, side)
+
+    mat, row = [], []
+    for n in range(BOARD_DIM):
+        row.append(np.full(shape, n))
+        if (n+1) % side == 0:
+            mat.append(row)
+            row = []
+    return np.block(mat)
+
+
 def is_filled(board):
     if np.count_nonzero(board) == BOARD_DIM**2:
         return True
