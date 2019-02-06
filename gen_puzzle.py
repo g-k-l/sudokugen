@@ -52,10 +52,10 @@ def create_puzzle(board):
     positions = list(positions)
 
     while True:
-        try:
-            position = positions.pop()
-        except IndexError:
+        if not positions:
             return board
+
+        position = positions.pop()
         x = position % BOARD_DIM
         y = math.floor(position / BOARD_DIM)
 
@@ -63,7 +63,6 @@ def create_puzzle(board):
         board[x, y] = 0
         if not solution_unique(board):
             board[x, y] = old_val
-            return board
 
 
 if __name__ == "__main__":
