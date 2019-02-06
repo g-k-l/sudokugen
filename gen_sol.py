@@ -135,6 +135,7 @@ def propagate_constraint(board):
 def backtrack_iter(board, check_unique=False):
     stack = [board]
     while True:
+        board = stack.pop()
         if is_filled(board):
             return process_solution(board)
         x, y = get_unfilled_cell_rand(board)
