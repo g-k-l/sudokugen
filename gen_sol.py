@@ -12,6 +12,8 @@ import sys
 
 import numpy as np
 
+from constants import BOARD_DIM, COMPLETE_ROW, DEBUG
+
 
 conn = sqlite3.connect('sudoku.db')
 
@@ -31,11 +33,17 @@ def setup_db(conn):
     conn.commit()
 
 
-BOARD_DIM = 9
-REP_UNFILLED_SQUARE = 0
-COMPLETE_ROW = set(range(1, BOARD_DIM+1))
+def group_blocks():
+    side = int(math.sqrt(BOARD_DIM))
+    shape = (side, side)
 
-DEBUG = False
+    mat, row = [], []
+    for n in range(BOARD_DIM):
+        row.append(np.full(shape, n))
+        if (n+1) % side == 0:
+            mat.append(row)
+            row = []
+    return np.block(mat)
 
 
 def is_filled(board):
@@ -114,7 +122,7 @@ def get_unfilled_cell_rand(board):
     if len(zero_indices) > 0:
         cell_index = np.random.randint(len(zero_indices))
     else:
-        cell_index = zero_indices[0]
+        raise IndexError("No unfilled cell remaining!")
     x, y = zero_indices[cell_index]
     return x, y
 
@@ -132,12 +140,12 @@ def propagate_constraint(board):
     return board
 
 
-def backtrack_iter(board, check_unique=False):
+def backtrack_iter(board):
     stack = [board]
     while True:
         board = stack.pop()
         if is_filled(board):
-            return process_solution(board)
+            return board
         x, y = get_unfilled_cell_rand(board)
         sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
         sys.stdout.flush()
@@ -215,4 +223,4 @@ if __name__ == "__main__":
 
     with ProcessPoolExecutor() as executor:
         for result in executor.map(backtrack_iter, starting_boards):
-            print(result)
+            process_solution(result)
