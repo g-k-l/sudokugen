@@ -12,6 +12,8 @@ import sys
 
 import numpy as np
 
+from constants import BOARD_DIM, COMPLETE_ROW, DEBUG
+
 
 conn = sqlite3.connect('sudoku.db')
 
@@ -29,13 +31,6 @@ def setup_db(conn):
     c.execute("""CREATE TABLE IF NOT EXISTS solutions (
         {});""".format(columns))
     conn.commit()
-
-
-BOARD_DIM = 9
-REP_UNFILLED_SQUARE = 0
-COMPLETE_ROW = set(range(1, BOARD_DIM+1))
-
-DEBUG = False
 
 
 def is_filled(board):

@@ -1,0 +1,4 @@
+
+BOARD_DIM = 9
+COMPLETE_ROW = set(range(1, BOARD_DIM+1))
+DEBUG = False
