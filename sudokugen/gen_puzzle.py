@@ -6,8 +6,8 @@ import sys
 
 import numpy as np
 
-from constants import BOARD_DIM
-from gen_sol import solution_unique
+from .constants import BOARD_DIM
+from .gen_sol import solution_unique
 
 
 conn = sqlite3.connect('sudoku.db')

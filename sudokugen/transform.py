@@ -5,7 +5,7 @@ existing puzzle.
 """
 import numpy as np
 
-from constants import BOARD_DIM
+from .constants import BOARD_DIM
 
 
 def x_translate(board, times=1):
