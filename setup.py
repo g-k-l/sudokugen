@@ -8,4 +8,8 @@ setup(name='sudokugen',
       author_email='kevin.g.k.liu@gmail.com',
       license='MIT',
       packages=['sudokugen'],
-      zip_safe=False)
+      zip_safe=False,
+      classifiers=[
+        "Sudoku Solver", "Sudoku Generator",
+        "backtracking",
+      ],)
