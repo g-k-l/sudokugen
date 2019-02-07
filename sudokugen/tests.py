@@ -2,9 +2,9 @@
 import numpy as np
 import pytest
 
-from constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
-import gen_sol
-import transform as tf
+from .constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
+from . import gen_sol
+from . import transform as tf
 
 
 @pytest.fixture

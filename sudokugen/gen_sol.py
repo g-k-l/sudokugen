@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-from constants import BOARD_DIM, COMPLETE_ROW, DEBUG
+from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG
 
 
 conn = sqlite3.connect('sudoku.db')
