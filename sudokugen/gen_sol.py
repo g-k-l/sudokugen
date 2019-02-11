@@ -18,7 +18,7 @@ import uuid
 import psycopg2
 import numpy as np
 
-from . import db
+from .db import insert_solutions, insert_puzzles, get_conn
 from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG
 
 
@@ -39,16 +39,6 @@ def is_filled(board):
     if np.count_nonzero(board) == BOARD_DIM**2:
         return True
     return False
-
-
-def process_solution(board):
-    """INSERT the generated solutions to db"""
-    c = conn.cursor()
-    columns = ", ".join(['"{}"'.format(n) for n in range(81)])
-    c.execute("INSERT INTO solutions ({}) VALUES {};".format(
-        columns, tuple(board.flatten())))
-    conn.commit()
-    return board
 
 
 def squares():
@@ -227,45 +217,60 @@ def create_solution(input_q, output_q):
     while True:
         board = input_q.get()
         try:
+            if board is None:
+                output_q.put(None)
+                break
             output_q.put(backtrack_iter(board))
+
         except queue.Full:
             sys.stdout.write("$$ sol_q is full!\r")
             sys.stdout.flush()
 
-        if board is None:
-            break
 
 
 def create_puzzle(input_q, output_q):
     while True:
         sol = input_q.get()
+        if sol is None:
+            output_q.put(None)
+            break
+        puzzle = sol.copy()
         try:
-            output_q.put(_create_puzzle(sol)) 
+            output_q.put((_create_puzzle(puzzle), sol)) 
         except queue.Full:
             sys.stdout.write("## puzzle_q is full!\r")
             sys.stdout.flush()
 
-        if sol is None:
-            break
-
 
 def to_db(input_q, db_batch_size):
-    cursor = db.get_conn().cursor()
+    conn = get_conn()
+    conn.autocommit = True
+    cursor = conn.cursor()
+    results = []
+    sentinel = True
     while True:
-        if input_q.qsize() < db_batch_size:
-            time.sleep(0.1)
-        else:
-            results = [input_q.get() for __ in range(db_batch_size)]
-            boards, __ = zip(*results)
-            db.insert_solutions(boards, cursor)
-            db.insert_puzzles(results, cursor)
+        if not input_q.empty():
+            board_and_sol = input_q.get()
+            if board_and_sol is None:
+                sentinel = None
+            else:
+                results.append(board_and_sol)
+
+        if not results and sentinel is None:
+            break
+
+        if len(results) >= db_batch_size or sentinel is None:
+            __, boards = zip(*results)
+            insert_solutions(boards, cursor)
+            insert_puzzles(results, cursor)
+            results = []
 
 
 def main(n_jobs, queue_size=100):
-    db_batch_size = math.floor(queue_size/2)
+    db_batch_size = min(math.floor(queue_size/2), n_jobs)
     sol_q = mp.Queue(maxsize=queue_size)
     puzzle_q = mp.Queue(maxsize=queue_size)
-    db_q = mp.Queue(maxsize=queue_size)
+    db_q = mp.Queue(maxsize=min(n_jobs, queue_size))
 
     create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
     create_p.daemon = True
@@ -290,11 +295,8 @@ def main(n_jobs, queue_size=100):
         else:
             sys.stdout.write("== sol_q is full!\r")
             sys.stdout.flush()
-
     create_p.join()
     puzzle_p.join()
     db_p.join()
     print("Finished.")
-
-
 

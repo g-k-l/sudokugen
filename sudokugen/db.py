@@ -13,14 +13,14 @@ def setup_db():
 
     solution = """
         CREATE TABLE IF NOT EXISTS solution (
-            board INTEGER PRIMARY KEY
+            board VARCHAR(81) PRIMARY KEY
         );
     """
     puzzle = """
         CREATE TABLE IF NOT EXISTS puzzle (
             id SERIAL PRIMARY KEY,
-            board INTEGER,
-            sol INTEGER REFERENCES solution(board)
+            board VARCHAR(81),
+            sol VARCHAR(81) REFERENCES solution(board)
         );
     """
     conn = psycopg2.connect(PG_SERVER)
@@ -43,20 +43,27 @@ def setup_db():
     print("Created puzzle table.")
 
 
+def to_strings(board):
+    return [str(n) for n in board.flatten()]
+
+
 def insert_solutions(boards, cursor):
     insert = """
         INSERT INTO solution (board) VALUES {};
     """
-    row_vals = uniques_only(boards, cursor)
-    rows = "\n".join(row_vals)
+    as_values_query = ["('{}')".format(board_str) 
+        for board_str in uniques_only(boards, cursor)]
+    rows = ",\n".join(as_values_query)
+    print(rows)
     cursor.execute(insert.format(rows))
 
 
 def insert_puzzles(boards_and_sols, cursor):
     insert = """
-        INSERT INTO puzzles (board, sol) VALUES {};
+        INSERT INTO puzzle (board, sol) VALUES {};
     """
-    rows = ",\n".join(["({}, {})".format(board.flatten(), sol.flatten())
+    rows = ",\n".join(["({}, {})".format(
+        ''.join(to_strings(board)), ''.join(to_strings(sol)))
         for board, sol in boards_and_sols])
     cursor.execute(insert.format(rows))
 
@@ -65,10 +72,12 @@ def uniques_only(boards, cursor):
     template = """
         SELECT board FROM solution WHERE board IN ('{}');
     """
-    board_strs = {"".join(board.flatten()) for board in boards}
+    board_strs = {"".join(to_strings(board)) for board in boards}
     maybe_dups = ", ".join(board_strs)
-    dups = set(cursor.execute(template.format(maybe_dups)))
-    return board_strs - dups
+    dups = cursor.execute(template.format(maybe_dups))
+    if not dups:
+        return board_strs
+    return board_strs - set(dups)
 
 
 def get_conn(conn_str=DB_CONN):
