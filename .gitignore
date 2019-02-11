@@ -1,6 +1,9 @@
 # local sqlite3 db
 sudoku.db
 
+# sublime
+sudoku.sublime-workspace
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
