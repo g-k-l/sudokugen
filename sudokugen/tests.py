@@ -45,9 +45,9 @@ def assert_board_is_valid(board):
 def test_squares_group():
     groups, lookup = gen_sol.squares()
     assert lookup[(1, 1)] == 0
-    assert lookup[(1, 8)] == 6
-    assert lookup[(8, 1)] == 2
-    assert (4, 8) in groups[7]
+    assert lookup[(1, 8)] == 2
+    assert lookup[(8, 1)] == 6
+    assert (4, 8) in groups[5]
 
 
 def test_squares_choices():
