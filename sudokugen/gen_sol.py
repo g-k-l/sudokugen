@@ -232,13 +232,16 @@ def to_db(input_q, db_batch_size):
 
 
 def main(n_jobs, queue_size=100):
-    db_batch_size = min(math.floor(queue_size/2), n_jobs)
+    if n_jobs:
+        db_batch_size = min(math.floor(queue_size/2), n_jobs)
+    else:
+        db_batch_size = math.floor(queue_size/2)
     sol_q = mp.JoinableQueue(maxsize=queue_size)
     puzzle_q = mp.JoinableQueue(maxsize=queue_size)
-    db_q = mp.JoinableQueue(maxsize=min(n_jobs, queue_size))
+    db_q = mp.JoinableQueue(maxsize=db_batch_size)
 
     create_ps, puzzle_ps = [], []
-    for __ in range(100):
+    for __ in range(3):
         create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
         create_p.daemon = True
         create_p.start()
@@ -247,14 +250,13 @@ def main(n_jobs, queue_size=100):
         puzzle_p.daemon = True
         puzzle_p.start()
         puzzle_ps.append(puzzle_p)
-    db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
-    db_p.daemon = True
-    db_p.start()
+        db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
+        db_p.daemon = True
+        db_p.start()
 
     enqueued = 0
     while True:
-        if enqueued >= n_jobs:
-            # sol_q.put(None)
+        if n_jobs is not None and enqueued >= n_jobs:
             break
 
         if not sol_q.full():
