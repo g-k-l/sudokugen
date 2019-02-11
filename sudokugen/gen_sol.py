@@ -222,13 +222,11 @@ def to_db(input_q, db_batch_size):
         if not results and sentinel is None:
             break
         if len(results) >= db_batch_size or sentinel is None:
-            print("lala")
             puzzles, boards, cts = zip(*results)
             insert_solutions(boards, cursor)
             insert_puzzles(zip(puzzles, boards), cursor)
             print("Stored {} puzzles and {} sols to db".format(
                 len(results), len(boards)))
-            print("Stored {}th-generated puzzle".format(cts[-1]))
             [input_q.task_done() for __ in range(len(results))]
             results = []
 
@@ -240,7 +238,7 @@ def main(n_jobs, queue_size=100):
     db_q = mp.JoinableQueue(maxsize=min(n_jobs, queue_size))
 
     create_ps, puzzle_ps = [], []
-    for __ in range(5):
+    for __ in range(100):
         create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
         create_p.daemon = True
         create_p.start()
@@ -266,10 +264,9 @@ def main(n_jobs, queue_size=100):
         else:
             sys.stdout.write("== sol_q is full!\r")
             sys.stdout.flush()
-    print("I got here")
     sol_q.join()
-    print("I got here2")
+    print("Solution process shutdown.")
     puzzle_q.join()
-    print("I got here3")
+    print("Puzzle process shutdown.")
     db_q.join()
     print("Finished.")
