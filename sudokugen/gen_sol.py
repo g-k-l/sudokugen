@@ -185,11 +185,10 @@ def create_solution(input_q, output_q):
     while True:
         board = input_q.get()
         try:
-            if board is None:
-                output_q.put(None)
-                break
-            output_q.put(backtrack_iter(board))
-
+            board, ct = board
+            output_q.put((backtrack_iter(board), ct))
+            print("\nCreated Solution {}".format(ct))
+            input_q.task_done()
         except queue.Full:
             sys.stdout.write("$$ sol_q is full!\r")
             sys.stdout.flush()
@@ -198,12 +197,12 @@ def create_solution(input_q, output_q):
 def create_puzzle(input_q, output_q):
     while True:
         sol = input_q.get()
-        if sol is None:
-            output_q.put(None)
-            break
+        sol, ct = sol
         puzzle = sol.copy()
         try:
-            output_q.put((_create_puzzle(puzzle), sol)) 
+            output_q.put((_create_puzzle(puzzle), sol, ct,))
+            print("\nCreated Puzzle {}".format(ct))
+            input_q.task_done()
         except queue.Full:
             sys.stdout.write("## puzzle_q is full!\r")
             sys.stdout.flush()
@@ -218,33 +217,38 @@ def to_db(input_q, db_batch_size):
     while True:
         if not input_q.empty():
             board_and_sol = input_q.get()
-            if board_and_sol is None:
-                sentinel = None
-            else:
-                results.append(board_and_sol)
+            results.append(board_and_sol)
 
         if not results and sentinel is None:
             break
-
         if len(results) >= db_batch_size or sentinel is None:
-            __, boards = zip(*results)
+            print("lala")
+            puzzles, boards, cts = zip(*results)
             insert_solutions(boards, cursor)
-            insert_puzzles(results, cursor)
+            insert_puzzles(zip(puzzles, boards), cursor)
+            print("Stored {} puzzles and {} sols to db".format(
+                len(results), len(boards)))
+            print("Stored {}th-generated puzzle".format(cts[-1]))
+            [input_q.task_done() for __ in range(len(results))]
             results = []
 
 
 def main(n_jobs, queue_size=100):
     db_batch_size = min(math.floor(queue_size/2), n_jobs)
-    sol_q = mp.Queue(maxsize=queue_size)
-    puzzle_q = mp.Queue(maxsize=queue_size)
-    db_q = mp.Queue(maxsize=min(n_jobs, queue_size))
+    sol_q = mp.JoinableQueue(maxsize=queue_size)
+    puzzle_q = mp.JoinableQueue(maxsize=queue_size)
+    db_q = mp.JoinableQueue(maxsize=min(n_jobs, queue_size))
 
-    create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
-    create_p.daemon = True
-    create_p.start()
-    puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
-    puzzle_p.daemon = True
-    puzzle_p.start()
+    create_ps, puzzle_ps = [], []
+    for __ in range(5):
+        create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
+        create_p.daemon = True
+        create_p.start()
+        create_ps.append(create_p)
+        puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
+        puzzle_p.daemon = True
+        puzzle_p.start()
+        puzzle_ps.append(puzzle_p)
     db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
     db_p.daemon = True
     db_p.start()
@@ -252,17 +256,20 @@ def main(n_jobs, queue_size=100):
     enqueued = 0
     while True:
         if enqueued >= n_jobs:
-            sol_q.put(None)
+            # sol_q.put(None)
             break
 
         if not sol_q.full():
-            sol_q.put(starting_board())
+            sol_q.put((starting_board(), enqueued,))
             enqueued += 1
             print("== {} job(s) enqueued".format(enqueued))
         else:
             sys.stdout.write("== sol_q is full!\r")
             sys.stdout.flush()
-    create_p.join()
-    puzzle_p.join()
-    db_p.join()
+    print("I got here")
+    sol_q.join()
+    print("I got here2")
+    puzzle_q.join()
+    print("I got here3")
+    db_q.join()
     print("Finished.")
