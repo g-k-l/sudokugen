@@ -42,10 +42,6 @@ def assert_board_is_valid(board):
         assert set(board[BLOCK_ARRAY == n]) == COMPLETE_ROW
 
 
-def test_group_blocks():
-    assert np.all(np.equal(gen_sol.group_blocks(), BLOCK_ARRAY))
-
-
 def test_squares_group():
     groups, lookup = gen_sol.squares()
     assert lookup[(1, 1)] == 0

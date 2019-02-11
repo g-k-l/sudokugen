@@ -54,7 +54,6 @@ def insert_solutions(boards, cursor):
     as_values_query = ["('{}')".format(board_str) 
         for board_str in uniques_only(boards, cursor)]
     rows = ",\n".join(as_values_query)
-    print(rows)
     cursor.execute(insert.format(rows))
 
 

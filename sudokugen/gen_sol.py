@@ -3,36 +3,16 @@ This file contains a backtracking
 sudoku solver for generating fully
 -populated puzzles.
 """
-import asyncio
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from itertools import islice
 import math
 import multiprocessing as mp
 import queue
-# from queue import Queue
 import sys
-import time
-import uuid
 
-import psycopg2
 import numpy as np
 
 from .db import insert_solutions, insert_puzzles, get_conn
-from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG
-
-
-def group_blocks():
-    side = int(math.sqrt(BOARD_DIM))
-    shape = (side, side)
-
-    mat, row = [], []
-    for n in range(BOARD_DIM):
-        row.append(np.full(shape, n))
-        if (n+1) % side == 0:
-            mat.append(row)
-            row = []
-    return np.block(mat)
+from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG, BLOCK_ARRAY
 
 
 def is_filled(board):
@@ -50,25 +30,10 @@ def squares():
     """
     groups = defaultdict(set)
     lookup = defaultdict(int)
-    data = [
-        (3, 3, 0),
-        (6, 3, 1),
-        (9, 3, 2),
-        (3, 6, 3),
-        (6, 6, 4),
-        (9, 6, 5),
-        (3, 9, 6),
-        (6, 9, 7),
-        (9, 9, 8),
-    ]
-    for position in range(BOARD_DIM**2):
-        x = position % BOARD_DIM
-        y = math.floor(position / BOARD_DIM)
-        for xlim, ylim, g in data:
-            if x < xlim and y < ylim:
-                groups[g].add((x, y))
-                lookup[(x, y)] = g
-                break
+    for x_arr, y_arr in zip(*np.indices((9, 9))):
+        for x, y in zip(x_arr, y_arr):
+            groups[BLOCK_ARRAY[x, y]].add((x, y))
+            lookup[(x, y)] = BLOCK_ARRAY[x, y]
     return groups, lookup
 
 
@@ -92,6 +57,9 @@ def construct_candidates(board, x, y):
         print(board)
         print("x: ", x)
         print("y: ", y)
+        print("from rows:", possible_from_row)
+        print("from cols:", possible_from_col)
+        print("from block:", possible_from_square)
         print(possible_from_col & possible_from_row & possible_from_square)
     return possible_from_col & possible_from_row & possible_from_square
 
@@ -227,7 +195,6 @@ def create_solution(input_q, output_q):
             sys.stdout.flush()
 
 
-
 def create_puzzle(input_q, output_q):
     while True:
         sol = input_q.get()
@@ -299,4 +266,3 @@ def main(n_jobs, queue_size=100):
     puzzle_p.join()
     db_p.join()
     print("Finished.")
-
