@@ -10,32 +10,6 @@ from .constants import BOARD_DIM
 from .gen_sol import solution_unique
 
 
-conn = sqlite3.connect('sudoku.db')
-
-
-def from_db(conn, limit=10):
-    c = conn.cursor()
-    if limit:
-        c.execute("SELECT * FROM solutions LIMIT {};".format(limit))
-    else:
-        c.execute("SELECT * FROM solutions;")
-    return [np.array(row).reshape((9, 9)) for row in c.fetchall()]
-
-
-def setup_db(conn):
-    """
-    Creates a table "solutions" to store
-    generated solutions.
-    """
-    template = '"{}" integer,'
-    columns = "\n".join(
-        [template.format(n) for n in range(80)] + ['"80" integer'])
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS puzzles (
-        {});""".format(columns))
-    conn.commit()
-
-
 def to_db(board):
     """INSERT the generated puzzle to db"""
     c = conn.cursor()

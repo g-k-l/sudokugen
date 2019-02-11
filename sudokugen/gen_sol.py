@@ -3,34 +3,23 @@ This file contains a backtracking
 sudoku solver for generating fully
 -populated puzzles.
 """
-
+import asyncio
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from itertools import islice
 import math
-import sqlite3
+import multiprocessing as mp
+import queue
+# from queue import Queue
 import sys
+import time
+import uuid
 
+import psycopg2
 import numpy as np
 
+from . import db
 from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG
-
-
-conn = sqlite3.connect('sudoku.db')
-
-
-def setup_db(conn):
-    """
-    Creates a table "solutions" to store
-    generated solutions.
-    """
-    template = '"{}" integer,'
-    columns = "\n".join(
-        [template.format(n) for n in range(80)] + ['"80" integer'])
-
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS solutions (
-        {});""".format(columns))
-    conn.commit()
 
 
 def group_blocks():
@@ -210,18 +199,102 @@ def prefill_diagonals(board):
     return board
 
 
-if __name__ == "__main__":
-    setup_db(conn)
+def _create_puzzle(board):
+    positions = np.arange(81)
+    np.random.shuffle(positions)
+    positions = list(positions)
 
-    try:
-        n_jobs = int(sys.argv[1])
-    except (IndexError, ValueError):
-        n_jobs = 1
+    while True:
+        if not positions:
+            return board
 
-    starting_boards = (
-        prefill_diagonals(np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
-        for __ in range(n_jobs))
+        position = positions.pop()
+        x = position % BOARD_DIM
+        y = math.floor(position / BOARD_DIM)
 
-    with ProcessPoolExecutor() as executor:
-        for result in executor.map(backtrack_iter, starting_boards):
-            process_solution(result)
+        old_val = board[x, y]
+        board[x, y] = 0
+        if not solution_unique(board):
+            board[x, y] = old_val
+
+
+def starting_board():
+    return prefill_diagonals(
+        np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
+
+
+def create_solution(input_q, output_q):
+    while True:
+        board = input_q.get()
+        try:
+            output_q.put(backtrack_iter(board))
+        except queue.Full:
+            sys.stdout.write("$$ sol_q is full!\r")
+            sys.stdout.flush()
+
+        if board is None:
+            break
+
+
+def create_puzzle(input_q, output_q):
+    while True:
+        sol = input_q.get()
+        try:
+            output_q.put(_create_puzzle(sol)) 
+        except queue.Full:
+            sys.stdout.write("## puzzle_q is full!\r")
+            sys.stdout.flush()
+
+        if sol is None:
+            break
+
+
+def to_db(input_q, db_batch_size):
+    cursor = db.get_conn().cursor()
+    while True:
+        if input_q.qsize() < db_batch_size:
+            time.sleep(0.1)
+        else:
+            results = [input_q.get() for __ in range(db_batch_size)]
+            boards, __ = zip(*results)
+            db.insert_solutions(boards, cursor)
+            db.insert_puzzles(results, cursor)
+
+
+def main(n_jobs, queue_size=100):
+    db_batch_size = math.floor(queue_size/2)
+    sol_q = mp.Queue(maxsize=queue_size)
+    puzzle_q = mp.Queue(maxsize=queue_size)
+    db_q = mp.Queue(maxsize=queue_size)
+
+    create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
+    create_p.daemon = True
+    create_p.start()
+    puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
+    puzzle_p.daemon = True
+    puzzle_p.start()
+    db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
+    db_p.daemon = True
+    db_p.start()
+
+    enqueued = 0
+    while True:
+        if enqueued >= n_jobs:
+            sol_q.put(None)
+            break
+
+        if not sol_q.full():
+            sol_q.put(starting_board())
+            enqueued += 1
+            print("== {} job(s) enqueued".format(enqueued))
+        else:
+            sys.stdout.write("== sol_q is full!\r")
+            sys.stdout.flush()
+
+    create_p.join()
+    puzzle_p.join()
+    db_p.join()
+    print("Finished.")
+
+
+
