@@ -1,10 +1,13 @@
+import asyncio
 
 import numpy as np
 import pytest
 
+from . import db
 from .constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
 from . import gen_sol
 from . import transform as tf
+
 
 
 @pytest.fixture
@@ -39,16 +42,12 @@ def assert_board_is_valid(board):
         assert set(board[BLOCK_ARRAY == n]) == COMPLETE_ROW
 
 
-def test_group_blocks():
-    assert np.all(np.equal(gen_sol.group_blocks(), BLOCK_ARRAY))
-
-
 def test_squares_group():
     groups, lookup = gen_sol.squares()
     assert lookup[(1, 1)] == 0
-    assert lookup[(1, 8)] == 6
-    assert lookup[(8, 1)] == 2
-    assert (4, 8) in groups[7]
+    assert lookup[(1, 8)] == 2
+    assert lookup[(8, 1)] == 6
+    assert (4, 8) in groups[5]
 
 
 def test_squares_choices():
@@ -115,3 +114,4 @@ def test_mirror_y(board):
 
 def test_shuff_numbers(board):
     assert_board_is_valid(tf.shuffle_numbers(board))
+
