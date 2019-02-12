@@ -245,14 +245,17 @@ def main(n_jobs, queue_size=100):
         create_p = mp.Process(target=create_solution, args=(sol_q, puzzle_q,))
         create_p.daemon = True
         create_p.start()
+
+    for __ in range(5):
         create_ps.append(create_p)
         puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
         puzzle_p.daemon = True
         puzzle_p.start()
-        puzzle_ps.append(puzzle_p)
-        db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
-        db_p.daemon = True
-        db_p.start()
+
+    puzzle_ps.append(puzzle_p)
+    db_p = mp.Process(target=to_db, args=(db_q, db_batch_size,))
+    db_p.daemon = True
+    db_p.start()
 
     enqueued = 0
     while True:
