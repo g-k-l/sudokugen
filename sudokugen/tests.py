@@ -148,4 +148,11 @@ def test_remove_candidates_from_line():
 def test_related_blocks():
     assert len(solve.related_blocks()) == 18
 
+def test_lines_in_block_pair():
+    block_pairs = [(0, 2), (1, 7), (2, 3)]
+    expected_linenos = [[0, 1, 2], [12, 13, 14], []]
+    for blocks, expected in zip(block_pairs, expected_linenos):
+        assert solve.lines_in_block_pair(*blocks) == expected
+
+
 

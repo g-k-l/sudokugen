@@ -169,6 +169,30 @@ def related_blocks():
     return list(chain(*[combinations(blocks, 2) for blocks in blocks_in_line()]))
 
 
+def lines_in_block_pair(block1, block2):
+    """Return lines which connect the two blocks"""
+    groups, __ = squares()
+    block1_indices, block2_indices = groups[block1], groups[block2]
+    xs_in_block1, ys_in_block1 = zip(*block1_indices)
+    xs_in_block2, ys_in_block2 = zip(*block2_indices)
+
+    linenos = []
+    for x in set(xs_in_block1) & set(xs_in_block2):
+        linenos.append(x)
+    for y in set(ys_in_block1) & set(ys_in_block2):
+        linenos.append(y+9)    
+    return linenos
+
+
+def find_double_pair_in(block1, block2):
+
+    groups, __ = square()
+
+    block1_indices, block2_indices = groups[block1], groups[block2]
+
+     
+
+
 def double_pair(puzzle, candidates):
     """
     For each pair of related blocks, check whether
@@ -180,7 +204,13 @@ def double_pair(puzzle, candidates):
     processed that number for the third related block.
     """
     num_order = np.arange(9)
-    np.random.shuffle(num_order) 
+    np.random.shuffle(num_order)
+
+    block_pairs = related_blocks()
+
+    for n in num_order:
+        for block_pair in block_pairs:
+            pass 
 
 
 
