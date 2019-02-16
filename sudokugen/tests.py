@@ -7,6 +7,7 @@ from . import db
 from . import client
 from .constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
 from . import gen_sol
+from . import solve
 from . import transform as tf
 
 
@@ -98,3 +99,41 @@ def test_mirror_y(board):
 def test_shuff_numbers(board):
     gen_sol.assert_board_is_valid(tf.shuffle_numbers(board))
 
+
+def test_candidates_dict(board):
+    index1, index2 = (2, 1), (3, 1)
+    orig_val1, orig_val2 = board[index1], board[index2]
+    board[index1] = 0
+    board[index2] = 0
+    candidates = dict(solve.candidates_dict(board))
+    assert index1 in candidates and index2 in candidates
+    assert (4, 1) not in candidates
+    assert candidates[index1] == {orig_val1}
+    assert candidates[index2] == {orig_val2}
+
+
+def test_remove_candidates_from_line():
+    candidates = {
+        (1, 1): {1, 2, 4, 3},
+        (1, 2): {3, 4, 5},
+        (1, 8): {2, 4, 5},
+    } 
+    lineno, n = 1, 4
+    expected = {
+        (1, 1): {1, 2, 4, 3},
+        (1, 2): {3, 5},
+        (1, 8): {2, 5},
+    }
+    solve.remove_candidates_from_line(candidates, n, lineno, except_for=[(1,1)])
+    assert candidates == expected
+
+
+def test_related_blocks():
+    assert len(solve.related_blocks()) == 18
+
+
+def test_lines_in_block_pair():
+    block_pairs = [(0, 2), (1, 7), (2, 3)]
+    expected_linenos = [[0, 1, 2], [12, 13, 14], []]
+    for blocks, expected in zip(block_pairs, expected_linenos):
+        assert solve.lines_in_block_pair(*blocks) == expected

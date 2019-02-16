@@ -8,6 +8,7 @@ the DFS/backtracking solver:
 http://norvig.com/sudoku.html
 """
 from collections import defaultdict
+from functools import lru_cache
 import math
 import multiprocessing as mp
 import queue
@@ -43,6 +44,7 @@ def is_filled(board):
     return False
 
 
+@lru_cache()
 def squares():
     """
     Generates "groups" which is a dictionary
@@ -65,6 +67,20 @@ def choices_from_square(board, x, y):
     cells_in_g = groups[g]
     numbers_in_g = {board[a, b] for a, b in cells_in_g}
     return COMPLETE_ROW - numbers_in_g
+
+
+def candidates_dict(puzzle):
+    """
+    Construct the "Pencil Marks" for puzzle.
+    """
+    candidates = defaultdict(set)
+    x_matrix, y_matrix = np.indices((9, 9))
+    for x_arr, y_arr in zip(x_matrix, y_matrix):
+        for x, y in zip(x_arr, y_arr):
+            if puzzle[(x, y)] != 0:
+                continue
+            candidates[(x, y)] = construct_candidates(puzzle, x, y)
+    return candidates
 
 
 def construct_candidates(board, x, y):
@@ -109,13 +125,15 @@ def propagate_constraint(board):
     """Fill out squares for which there is only
         one choice remaining after applying the
         previous guess"""
-    x_matrix, y_matrix = np.indices((9, 9))
-    for x_arr, y_arr in zip(x_matrix, y_matrix):
-        for x, y in zip(x_arr, y_arr):
-            candidates = construct_candidates(board, x, y)
-            if len(candidates) == 1 and board[x, y] == 0:
-                board[x, y] = candidates.pop()
-    return board
+    while True:
+        cont = False 
+        candidates = candidates_dict(board)
+        for (x, y), cands in candidates.items():
+            if len(cands) == 1:
+                board[(x, y)] = cands.pop()
+                cont = True 
+        if not cont:
+            break
 
 
 def backtrack_iter(board):
@@ -137,7 +155,7 @@ def backtrack_iter(board):
             for candidate in candidates:
                 copied = board.copy()
                 copied[x, y] = candidate
-                copied = propagate_constraint(copied)
+                propagate_constraint(copied)
                 stack.append(copied)
             if candidates:
                 break
@@ -176,7 +194,7 @@ def solution_unique(board):
         for candidate in candidates:
             copied = board.copy()
             copied[x, y] = candidate
-            copied = propagate_constraint(copied)
+            propagate_constraint(copied)
             stack.append(copied)
 
 
@@ -215,8 +233,7 @@ def create_puzzle_from_board(board):
 
 
 def starting_board():
-    return prefill_diagonals(
-        np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
+    return np.zeros((BOARD_DIM, BOARD_DIM), dtype=int)
 
 
 def create_solution(input_q, output_q):
@@ -228,7 +245,7 @@ def create_solution(input_q, output_q):
             print("\nCreated Solution {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("$$ sol_q is full!\r")
+            sys.stdout.write("$$ puzzle_q is full!\r")
             sys.stdout.flush()
 
 
@@ -242,7 +259,7 @@ def create_puzzle(input_q, output_q):
             print("\nCreated Puzzle {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("## puzzle_q is full!\r")
+            sys.stdout.write("## db_q is full!\r")
             sys.stdout.flush()
 
 
@@ -284,7 +301,7 @@ def main(n_jobs, queue_size=100):
         create_p.daemon = True
         create_p.start()
 
-    for __ in range(5):
+    for __ in range(9):
         create_ps.append(create_p)
         puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
         puzzle_p.daemon = True
