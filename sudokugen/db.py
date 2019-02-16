@@ -83,15 +83,17 @@ def uniques_only(boards, cursor):
 def get_puzzle(cursor, puzzle_id=None):
     if puzzle_id is None:
         stmt = """
-            SELECT board FROM puzzle ORDER BY RANDOM() LIMIT 1;
+            SELECT board, sol FROM puzzle ORDER BY RANDOM() LIMIT 1;
         """
     else:
         stmt = """
-            SELECT board from puzzle WHERE id = {};
+            SELECT board, sol from puzzle WHERE id = {};
         """.format(puzzle_id)
     cursor.execute(stmt)
-    raw_str = iter(cursor.fetchone()[0])
-    return [list(islice(raw_str, 9)) for __ in range(9)]
+    board_str, sol_str = cursor.fetchone()
+    board = [list(islice(board_str, 9*n, 9*(n+1))) for n in range(9)]
+    sol = [list(islice(sol_str, 9*k, 9*(k+1))) for k in range(9)]
+    return board, sol
 
 
 def get_conn(conn_str=DB_CONN):
