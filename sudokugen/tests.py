@@ -131,15 +131,15 @@ def test_candidates_dict(full_board):
 
 def test_remove_candidates_from_line():
     candidates = {
-        (1, 1): {1,2,4,3},
-        (1, 2): {3,4,5},
-        (1, 8): {2,4,5},
+        (1, 1): {1, 2, 4, 3},
+        (1, 2): {3, 4, 5},
+        (1, 8): {2, 4, 5},
     } 
     lineno, n = 1, 4
     expected = {
-        (1, 1): {1,2,4,3},
-        (1, 2): {3,5},
-        (1, 8): {2,5},    
+        (1, 1): {1, 2, 4, 3},
+        (1, 2): {3, 5},
+        (1, 8): {2, 5},
     }
     solve.remove_candidates_from_line(candidates, n, lineno, except_for=[(1,1)])
     assert candidates == expected
@@ -147,6 +147,7 @@ def test_remove_candidates_from_line():
 
 def test_related_blocks():
     assert len(solve.related_blocks()) == 18
+
 
 def test_lines_in_block_pair():
     block_pairs = [(0, 2), (1, 7), (2, 3)]

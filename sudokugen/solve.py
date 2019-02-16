@@ -337,6 +337,6 @@ def solve(puzzle):
             if stuck:
                 # too hard to be solved by human
                 return history, puzzle
-
     # solved puzzle, with full history of steps
     return history, puzzle
+
