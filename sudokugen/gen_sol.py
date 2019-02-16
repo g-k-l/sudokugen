@@ -234,8 +234,6 @@ def create_puzzle_from_board(board):
 
 def starting_board():
     return np.zeros((BOARD_DIM, BOARD_DIM), dtype=int)
-    # return prefill_diagonals(
-    #     np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int))
 
 
 def create_solution(input_q, output_q):
