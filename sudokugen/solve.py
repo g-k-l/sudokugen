@@ -9,6 +9,7 @@ Techniques come from
 http://www.sudokuoftheday.com/techniques/
 """
 from collections import defaultdict, Counter
+from copy import deepcopy
 from functools import lru_cache
 from itertools import chain, takewhile, islice, combinations
 
@@ -92,9 +93,9 @@ def _line(lineno):
         17: y=8
     """
     if 0 < lineno < 8:
-        return [(lineno, n) for n in range(9)]
+        return set((lineno, n) for n in range(9))
     elif 9 < lineno < 18:
-        return [(n, lineno - 9) for n in range(9)]
+        return set((n, lineno - 9) for n in range(9))
     else:
         raise IndexError("Only 18 possible lines!")
 
@@ -144,19 +145,20 @@ def candidate_line(candidates):
     sentinel = False
     for n in num_order:
         if sentinel:
-            return
+            return sentinel
         for g in group_order:
             cands = candidates_for_n_in_g(candidates, n, g)
             x_indices = [c[0] for c in cands]
             y_indices = [c[1] for c in cands]
             if len(x_indices) == 1:
                 lineno = x_indices[0]
-                candidates = remove_candidates_from_line(candidates, n, lineno, cands)
+                remove_candidates_from_line(candidates, n, lineno, cands)
                 sentinel = True 
             elif len(y_indices) == 1:
                 lineno = y_indices[0] + 9
-                candidates = remove_candidates_from_line(candidates, n, lineno, cands) 
+                remove_candidates_from_line(candidates, n, lineno, cands) 
                 sentinel = True 
+    return sentinel
 
 
 def blocks_in_line():
@@ -165,10 +167,22 @@ def blocks_in_line():
 
 
 @lru_cache()
+def lookup_related_block(block1, block2):
+    """Look up the third related block"""
+    for blocks in blocks_in_line():
+        if block1 in blocks and block2 in blocks:
+            blocks_set = set(blocks)
+            blocks_set.discard(block1)
+            blocks_set.discard(block2)
+            return blocks_set.pop()
+
+
+@lru_cache()
 def related_blocks():
     return list(chain(*[combinations(blocks, 2) for blocks in blocks_in_line()]))
 
 
+@lru_cache()
 def lines_in_block_pair(block1, block2):
     """Return lines which connect the two blocks"""
     groups, __ = squares()
@@ -180,20 +194,46 @@ def lines_in_block_pair(block1, block2):
     for x in set(xs_in_block1) & set(xs_in_block2):
         linenos.append(x)
     for y in set(ys_in_block1) & set(ys_in_block2):
-        linenos.append(y+9)    
+        linenos.append(y+9)
     return linenos
 
 
-def find_double_pair_in(block1, block2):
+def n_is_double_pair_in(n, block1, block2, candidates):
+    block3 = lookup_related_block(block1, block2)
+    linenos = lines_in_block_pair(block1, block2)
 
-    groups, __ = square()
+    block1_idxs = candidates_for_n_in_g(n, block1, candidates)
+    block2_idxs = candidates_for_n_in_g(n, block2, candidates)
+    block3_idxs = candidates_for_n_in_g(n, block3, candidates)
 
-    block1_indices, block2_indices = groups[block1], groups[block2]
+    if not block3_idxs:
+        # nothing to eliminate, exit.
+        return set()
 
-     
+    for line1, line2 in combinations(linenos, 2):
+        line3 = set(linenos) - {line1, line2}
+        line1_idxs, line2_idxs, line3_idxs = _line(line1), _line(line2), _line(line3)
+
+        maybe_eliminatable = (line1_idxs & block3_idxs) | (line2_idxs & block3_idxs)
+        if not maybe_eliminatable:
+            continue
+
+        n_is_cand_of_line1 = (bool(block1_idxs & line1_idxs)
+            and bool(block2_idxs & line1_idxs))
+        n_is_cand_of_line2 = (bool(block1_idxs & line2_idxs)
+            and bool(block2_idxs & line2_idxs))
+        n_is_not_cand_of_line3 = (not bool(block1_idxs & line3_idxs)
+            and bool(block2_idxs & line3_idxs))
+
+        n_is_double_pair = (n_is_cand_of_line1 and n_is_cand_of_line2
+            and n_is_not_cand_of_line3)
+
+        if n_is_double_pair:
+            return maybe_eliminatable
+    return set()
 
 
-def double_pair(puzzle, candidates):
+def double_pair(candidates):
     """
     For each pair of related blocks, check whether
     there exists a number that only appears in two
@@ -205,12 +245,18 @@ def double_pair(puzzle, candidates):
     """
     num_order = np.arange(9)
     np.random.shuffle(num_order)
-
     block_pairs = related_blocks()
 
-    for n in num_order:
-        for block_pair in block_pairs:
-            pass 
+    for block1, block2 in block_pairs:
+        num_order = np.arange(9)
+        np.random.shuffle(num_order)
+        for n in num_order:
+            eliminatable_idxs = n_is_double_pair_in(n, block1, block2, candidates)
+            for idxs in eliminatable_idxs:
+                candidates[idxs].discard(n)
+            if eliminatable_idxs:
+                return True
+    return False
 
 
 
@@ -281,12 +327,13 @@ def solve(puzzle):
         else:
             stuck = True
             for reduction in enumerate(REDUCTIONS):
-                reduction(candidates) # modifies candidates
-                history.append((copy, reduction))
-                success = move(puzzle, candidates)
-                if success:
-                    stuck = False
-                    break
+                history.append((deepcopy(candidates), reduction))
+                reduced = reduction(candidates) # modifies candidates
+                if reduced:
+                    success = move(puzzle, candidates)
+                    if success:
+                        stuck = False
+                        break
             if stuck:
                 # too hard to be solved by human
                 return history, puzzle
