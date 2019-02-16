@@ -17,21 +17,7 @@ import numpy as np
 
 from .constants import BLOCK_ARRAY, COMPLETE_ROW
 from .gen_sol import (construct_candidates, squares,
-    is_filled)
-
-
-def candidates_dict(puzzle):
-    """
-    Construct the "Pencil Marks" for puzzle.
-    """
-    candidates = defaultdict(set)
-    x_matrix, y_matrix = np.indices((9, 9))
-    for x_arr, y_arr in zip(x_matrix, y_matrix):
-        for x, y in zip(x_arr, y_arr):
-            if puzzle[(x, y)] != 0:
-                continue
-            candidates[(x, y)] = construct_candidates(puzzle, x, y)
-    return candidates
+    is_filled, candidates_dict)
 
 
 def single_candidate(puzzle, candidates):
