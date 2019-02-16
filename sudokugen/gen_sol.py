@@ -192,7 +192,7 @@ def create_solution(input_q, output_q):
             print("\nCreated Solution {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("$$ sol_q is full!\r")
+            sys.stdout.write("$$ puzzle_q is full!\r")
             sys.stdout.flush()
 
 
@@ -206,7 +206,7 @@ def create_puzzle(input_q, output_q):
             print("\nCreated Puzzle {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("## puzzle_q is full!\r")
+            sys.stdout.write("## db_q is full!\r")
             sys.stdout.flush()
 
 
@@ -248,7 +248,7 @@ def main(n_jobs, queue_size=100):
         create_p.daemon = True
         create_p.start()
 
-    for __ in range(5):
+    for __ in range(9):
         create_ps.append(create_p)
         puzzle_p = mp.Process(target=create_puzzle, args=(puzzle_q, db_q,))
         puzzle_p.daemon = True
