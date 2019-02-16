@@ -96,6 +96,15 @@ def get_unfilled_cell_rand(board):
     return x, y
 
 
+def get_shuffled_unfilled_cells(board):
+    zero_indices = np.argwhere(board == 0)
+    if len(zero_indices) > 0:
+        np.random.shuffle(zero_indices)
+    else:
+        raise IndexError("No unfilled cell remaining!")
+    return zero_indices 
+
+
 def propagate_constraint(board):
     """Fill out squares for which there is only
         one choice remaining after applying the
@@ -104,7 +113,7 @@ def propagate_constraint(board):
     for x_arr, y_arr in zip(x_matrix, y_matrix):
         for x, y in zip(x_arr, y_arr):
             candidates = construct_candidates(board, x, y)
-            if len(candidates) == 1:
+            if len(candidates) == 1 and board[x, y] == 0:
                 board[x, y] = candidates.pop()
     return board
 
@@ -112,19 +121,26 @@ def propagate_constraint(board):
 def backtrack_iter(board):
     stack = [board]
     while True:
-        board = stack.pop()
-        if is_filled(board):
-            return board
-        x, y = get_unfilled_cell_rand(board)
-        sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
-        sys.stdout.flush()
+        try:
+            board = stack.pop()
+            if is_filled(board):
+                return board
+        except IndexError:
+            print("No solution.")
+            return
+        
+        for x, y in get_shuffled_unfilled_cells(board):
+            sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+            sys.stdout.flush()
 
-        candidates = construct_candidates(board, x, y)
-        for candidate in candidates:
-            copied = board.copy()
-            copied[x, y] = candidate
-            copied = propagate_constraint(copied)
-            stack.append(copied)
+            candidates = construct_candidates(board, x, y)
+            for candidate in candidates:
+                copied = board.copy()
+                copied[x, y] = candidate
+                copied = propagate_constraint(copied)
+                stack.append(copied)
+            if candidates:
+                break
 
 
 def board_in_solutions(board, solutions):
@@ -179,7 +195,7 @@ def prefill_diagonals(board):
     return board
 
 
-def _create_puzzle(board):
+def create_puzzle_from_board(board):
     positions = np.arange(81)
     np.random.shuffle(positions)
     positions = list(positions)
@@ -222,7 +238,7 @@ def create_puzzle(input_q, output_q):
         sol, ct = sol
         puzzle = sol.copy()
         try:
-            output_q.put((_create_puzzle(puzzle), sol, ct,))
+            output_q.put((create_puzzle_from_board(puzzle), sol, ct,))
             print("\nCreated Puzzle {}".format(ct))
             input_q.task_done()
         except queue.Full:

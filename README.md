@@ -45,6 +45,3 @@ python -m sudokugen play
 ```
 
 
-
-# Generating Puzzles from Solutions
-
