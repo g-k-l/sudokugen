@@ -117,7 +117,7 @@ def test_shuff_numbers(full_board):
     assert_board_is_valid(tf.shuffle_numbers(full_board))
 
 
-def test_candidate_line(full_board):
+def test_candidates_dict(full_board):
     index1, index2 = (2, 1), (3, 1)
     orig_val1, orig_val2 = full_board[index1], full_board[index2]
     full_board[index1] = 0
@@ -129,7 +129,17 @@ def test_candidate_line(full_board):
     assert candidates[index2] == {orig_val2}
 
 
-
-
-
-
+def test_remove_candidates_from_line():
+    candidates = {
+        (1, 1): {1,2,4,3},
+        (1, 2): {3,4,5},
+        (1, 8): {2,4,5},
+    } 
+    lineno, n = 1, 4
+    expected = {
+        (1, 1): {1,2,4,3},
+        (1, 2): {3,5},
+        (1, 8): {2,5},    
+    }
+    solve.remove_candidates_from_line(candidates, n, lineno, except_for=[(1,1)])
+    assert candidates == expected

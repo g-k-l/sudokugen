@@ -118,7 +118,7 @@ def remove_candidates_from_line(candidates, n, lineno, except_for=None):
     if except_for is None:
         except_for = []
     for x, y in _line(lineno):
-        if (x, y) in except_for:
+        if (x, y) in except_for or (x, y) not in candidates:
             continue
         candidates[(x, y)].discard(n)
 
@@ -147,11 +147,11 @@ def candidate_line(candidates):
             y_indices = [c[1] for c in cands]
             if len(x_indices) == 1:
                 lineno = x_indices[0]
-                remove_candidates_from_line(candidates, n, lineno, cands)
+                candidates = remove_candidates_from_line(candidates, n, lineno, cands)
                 sentinel = True 
             elif len(y_indices) == 1:
                 lineno = y_indices[0] + 9
-                remove_candidates_from_line(candidates, n, lineno, cands) 
+                candidates = remove_candidates_from_line(candidates, n, lineno, cands) 
                 sentinel = True 
 
 
