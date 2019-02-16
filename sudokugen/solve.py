@@ -1,7 +1,7 @@
 """
 An enhanced solver that implements
 human techniques in addition to brute-force
-backtracking. Give the technique used to
+backtracking. Given the technique used to
 solve each puzzle, we can create a metric
 measuring a puzzle's difficulty.
 
@@ -9,7 +9,8 @@ Techniques come from
 http://www.sudokuoftheday.com/techniques/
 """
 from collections import defaultdict, Counter
-from itertools import chain, takewhile
+from functools import lru_cache
+from itertools import chain, takewhile, islice
 
 import numpy as np
 
@@ -19,6 +20,9 @@ from .gen_sol import (construct_candidates, squares,
 
 
 def candidates_dict(puzzle):
+    """
+    Construct the "Pencil Marks" for puzzle.
+    """
     candidates = defaultdict(set)
     x_matrix, y_matrix = np.indices((9, 9))
     for x_arr, y_arr in zip(x_matrix, y_matrix):
@@ -69,8 +73,86 @@ def single_position(puzzle, candidates):
     return False
 
 
-def candidate_line(puzzle, candidates):
-    pass
+@lru_cache()
+def _line(lineno):
+    """
+    Get the indices of a line labeled lineno.
+    Labeling works as follows:
+        0: x=0,
+        1: x=1,
+        ...
+        8: x=8,
+        9: y=0,
+        10: y=1,
+        ...
+        17: y=8
+    """
+    if 0 < lineno < 8:
+        return [(lineno, n) for n in range(9)]
+    elif 9 < lineno < 18:
+        return [(n, lineno - 9) for n in range(9)]
+    else:
+        raise IndexError("Only 18 possible lines!")
+
+
+def candidates_for_n_in_g(candidates, n, g):
+    """
+    Get all indices for which n appears a candidate
+    in block g.
+    """
+    groups, __ = squares()
+    block = groups[g]
+
+    cand_indices = []
+    for x, y in block:
+        if n in candidates[(x, y)]:
+            cand_indices.append((x, y))
+    return cand_indices
+
+
+def remove_candidates_from_line(candidates, n, lineno, except_for=None):
+    """
+    Remove all candidates of the number n in
+    the line labeled lineno
+    """
+    if except_for is None:
+        except_for = []
+    for x, y in _line(lineno):
+        if (x, y) in except_for:
+            continue
+        candidates[(x, y)].discard(n)
+
+
+def candidate_line(candidates):
+    """
+    For each block, check whether there is a number
+    that only appears in a single line as a candidate.
+    For each such number, eliminate the pencil mark of
+    that number in the other two blocks on that line.
+
+    Stop after finding one such number and having processed
+    that number for each block.
+    """
+    num_order, group_order = np.arange(9), np.arange(9)
+    np.random.shuffle(group_order)
+    np.random.shuffle(num_order)
+
+    sentinel = False
+    for n in num_order:
+        if sentinel:
+            return
+        for g in group_order:
+            cands = candidates_for_n_in_g(candidates, n, g)
+            x_indices = [c[0] for c in cands]
+            y_indices = [c[1] for c in cands]
+            if len(x_indices) == 1:
+                lineno = x_indices[0]
+                remove_candidates_from_line(candidates, n, lineno, cands)
+                sentinel = True 
+            elif len(y_indices) == 1:
+                lineno = y_indices[0] + 9
+                remove_candidates_from_line(candidates, n, lineno, cands) 
+                sentinel = True 
 
 
 def double_pair(puzzle, candidates):
@@ -105,10 +187,20 @@ def nishio_search(puzzle, candidates):
     pass
 
 
+MOVES = [single_candidate, single_position]
+
+REDUCTIONS = [
+    candidate_line,
+    double_pair,
+    multiple_lines,
+    naked_combos,
+    hidden_combos,
+    x_wing,
+    swordfish,
+    nishio_search, 
+]
 
 TIERS = {
-    single_candidate: 1,
-    single_position: 1,
     candidate_line: 2,
     double_pair: 2,
     multiple_lines: 2,
@@ -119,33 +211,30 @@ TIERS = {
     nishio_search: 5
 }
 
-# in order of increasing sophistication
-TECHNIQUES = [
-    single_candidate,
-    single_position,
-    candidate_line,
-    double_pair,
-    multiple_lines,
-    naked_combos,
-    hidden_combos,
-    x_wing,
-    swordfish,
-    nishio_search,
-]
-
 
 def solve(puzzle):
     history = []
     while not is_filled(puzzle):
         candidates = candidates_dict(puzzle)
         copy = puzzle.copy()
-        for level, technique in enumerate(TECHNIQUES):
-            success = technique(puzzle, candidates)
-            history.append((copy, level))
+
+        for move in MOVES:
+            success = move(puzzle, candidates) # modifies puzzle
             if success:
+                history.append((copy, move))
                 break
-            if level == len(TECHNIQUES) - 1:
-                # too hard to be solved by human
-                return history, puzzle
+            else:
+                stuck = True
+                for reduction in enumerate(REDUCTIONS):
+                    reduction(candidates) # modifies candidates
+                    history.append((copy, reduction))
+                    success = move(puzzle, candidates)
+                    if success:
+                        stuck = False
+                        break
+                if stuck:
+                    # too hard to be solved by human
+                    return history, puzzle
+
     # solved puzzle, with full history of steps
     return history, puzzle

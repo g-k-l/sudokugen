@@ -6,12 +6,13 @@ import pytest
 from . import db
 from .constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
 from . import gen_sol
+from . import solve
 from . import transform as tf
 
 
 
 @pytest.fixture
-def board():
+def full_board():
     return np.array(
         [[1, 3, 5, 2, 7, 8, 9, 6, 4],
          [6, 8, 2, 4, 9, 5, 7, 1, 3],
@@ -87,31 +88,48 @@ def test_backtrack_iter():
     assert_board_is_valid(sol)
 
 
-def test_x_translate(board):
-    assert np.all(np.equal(tf.x_translate(board, times=3), board))
+def test_x_translate(full_board):
+    assert np.all(np.equal(tf.x_translate(full_board, times=3), full_board))
     for n in range(3):
-        assert_board_is_valid(tf.x_translate(board, times=n+1))
+        assert_board_is_valid(tf.x_translate(full_board, times=n+1))
 
 
-def test_y_translate(board):
-    assert np.all(np.equal(tf.y_translate(board, times=3), board))
+def test_y_translate(full_board):
+    assert np.all(np.equal(tf.y_translate(full_board, times=3), full_board))
     for n in range(3):
-        assert_board_is_valid(tf.y_translate(board, times=n+1))
+        assert_board_is_valid(tf.y_translate(full_board, times=n+1))
 
 
-def test_rotate(board):
+def test_rotate(full_board):
     for n in range(3):
-        assert_board_is_valid(tf.rotate(board, times=n+1))
+        assert_board_is_valid(tf.rotate(full_board, times=n+1))
 
 
-def test_mirror_x(board):
-    assert_board_is_valid(tf.mirror_x(board))
+def test_mirror_x(full_board):
+    assert_board_is_valid(tf.mirror_x(full_board))
 
 
-def test_mirror_y(board):
-    assert_board_is_valid(tf.mirror_y(board))
+def test_mirror_y(full_board):
+    assert_board_is_valid(tf.mirror_y(full_board))
 
 
-def test_shuff_numbers(board):
-    assert_board_is_valid(tf.shuffle_numbers(board))
+def test_shuff_numbers(full_board):
+    assert_board_is_valid(tf.shuffle_numbers(full_board))
+
+
+def test_candidate_line(full_board):
+    index1, index2 = (2, 1), (3, 1)
+    orig_val1, orig_val2 = full_board[index1], full_board[index2]
+    full_board[index1] = 0
+    full_board[index2] = 0
+    candidates = dict(solve.candidates_dict(full_board))
+    assert index1 in candidates and index2 in candidates
+    assert (4, 1) not in candidates
+    assert candidates[index1] == {orig_val1}
+    assert candidates[index2] == {orig_val2}
+
+
+
+
+
 

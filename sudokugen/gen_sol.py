@@ -4,6 +4,7 @@ sudoku solver for generating fully
 -populated puzzles.
 """
 from collections import defaultdict
+from functools import lru_cache
 import math
 import multiprocessing as mp
 import queue
@@ -21,6 +22,7 @@ def is_filled(board):
     return False
 
 
+@lru_cache()
 def squares():
     """
     Generates "groups" which is a dictionary
