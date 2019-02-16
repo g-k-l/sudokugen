@@ -143,3 +143,9 @@ def test_remove_candidates_from_line():
     }
     solve.remove_candidates_from_line(candidates, n, lineno, except_for=[(1,1)])
     assert candidates == expected
+
+
+def test_related_blocks():
+    assert len(solve.related_blocks()) == 18
+
+

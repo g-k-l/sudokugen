@@ -10,7 +10,7 @@ http://www.sudokuoftheday.com/techniques/
 """
 from collections import defaultdict, Counter
 from functools import lru_cache
-from itertools import chain, takewhile, islice
+from itertools import chain, takewhile, islice, combinations
 
 import numpy as np
 
@@ -71,6 +71,10 @@ def single_position(puzzle, candidates):
             puzzle[single_indices[0]] = single
             return True
     return False
+
+
+def move(puzzle, candidates):
+    return single_candidate(puzzle, candidates) or single_position(puzzle, candidates)
 
 
 @lru_cache()
@@ -155,8 +159,29 @@ def candidate_line(candidates):
                 sentinel = True 
 
 
+def blocks_in_line():
+    return [(0, 1, 2), (3, 4, 5), (6, 7, 8),
+        (0, 3, 6), (1, 4, 7), (2, 5, 8)]
+
+
+@lru_cache()
+def related_blocks():
+    return list(chain(*[combinations(blocks, 2) for blocks in blocks_in_line()]))
+
+
 def double_pair(puzzle, candidates):
-    pass
+    """
+    For each pair of related blocks, check whether
+    there exists a number that only appears in two
+    same lines in those blocks. Remove that number
+    from the third line in the third related block.
+
+    Stop after finding on such number and having
+    processed that number for the third related block.
+    """
+    num_order = np.arange(9)
+    np.random.shuffle(num_order) 
+
 
 
 def multiple_lines(puzzle, candidates):
@@ -218,23 +243,23 @@ def solve(puzzle):
         candidates = candidates_dict(puzzle)
         copy = puzzle.copy()
 
-        for move in MOVES:
-            success = move(puzzle, candidates) # modifies puzzle
-            if success:
-                history.append((copy, move))
-                break
-            else:
-                stuck = True
-                for reduction in enumerate(REDUCTIONS):
-                    reduction(candidates) # modifies candidates
-                    history.append((copy, reduction))
-                    success = move(puzzle, candidates)
-                    if success:
-                        stuck = False
-                        break
-                if stuck:
-                    # too hard to be solved by human
-                    return history, puzzle
+        # modifies puzzle
+        success = move(puzzle, candidates)
+        if success:
+            history.append((copy, move))
+            continue 
+        else:
+            stuck = True
+            for reduction in enumerate(REDUCTIONS):
+                reduction(candidates) # modifies candidates
+                history.append((copy, reduction))
+                success = move(puzzle, candidates)
+                if success:
+                    stuck = False
+                    break
+            if stuck:
+                # too hard to be solved by human
+                return history, puzzle
 
     # solved puzzle, with full history of steps
     return history, puzzle
