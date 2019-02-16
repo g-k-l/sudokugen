@@ -1,3 +1,4 @@
+from itertools import islice
 import os
 
 import psycopg2
@@ -77,6 +78,20 @@ def uniques_only(boards, cursor):
     if not dups:
         return board_strs
     return board_strs - set(dups)
+
+
+def get_puzzle(cursor, puzzle_id=None):
+    if puzzle_id is None:
+        stmt = """
+            SELECT board FROM puzzle ORDER BY RANDOM() LIMIT 1;
+        """
+    else:
+        stmt = """
+            SELECT board from puzzle WHERE id = {};
+        """.format(puzzle_id)
+    cursor.execute(stmt)
+    raw_str = iter(cursor.fetchone()[0])
+    return [list(islice(raw_str, 9)) for __ in range(9)]
 
 
 def get_conn(conn_str=DB_CONN):

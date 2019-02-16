@@ -2,6 +2,10 @@
 This file contains a backtracking
 sudoku solver for generating fully
 -populated puzzles.
+
+Here is another implementation of
+the DFS/backtracking solver:
+http://norvig.com/sudoku.html
 """
 from collections import defaultdict
 import math
