@@ -58,8 +58,11 @@ Here, `n_jobs` is the number of puzzle and solution pairs to generate. If omitte
 
 
 ## Game Client
-There is also a `curses`-based interactive client which serves a randomly generated puzzle. Note, the 
+There is also a `curses`-based interactive client which serves a randomly generated puzzle. Note, connection to a postgres database that contains generated puzzles and solutions is required.
 ```
+export PG_CONN="postgres://..."
+export SUDOKU_DB_NAME="my_sudoku_db"
+
 python -m sudokugen play
 ```
 
