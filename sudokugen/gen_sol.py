@@ -132,6 +132,7 @@ def propagate_constraint(board):
             if len(cands) == 1:
                 board[(x, y)] = cands.pop()
                 cont = True 
+                break
         if not cont:
             break
 
