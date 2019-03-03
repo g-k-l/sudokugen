@@ -1,9 +1,12 @@
-
+import os
 import numpy as np
 
 BOARD_DIM = 9
 COMPLETE_ROW = set(range(1, BOARD_DIM+1))
-DEBUG = False
+try:
+	DEBUG = os.environ["SUDOKU_DEBUG"]
+except KeyError:
+	DEBUG = False
 
 BLOCK_ARRAY = np.array([
     [0, 0, 0, 1, 1, 1, 2, 2, 2],

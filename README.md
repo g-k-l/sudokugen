@@ -3,8 +3,8 @@
 
 ## Solver
 
-The contents of my_puzzle is a sequence of characters of length 81. Assume row traversal.
-0 indicates a missing cell.
+The contents of `my_puzzle` is a sequence of characters of length 81. Assume row traversal.
+0 indicates an empty cell.
 ```
 my_puzzle="800003007600400358100080694904138506500200980280509040000300109369051070702946030"
 

@@ -148,8 +148,9 @@ def backtrack_iter(board):
             return
         
         for x, y in get_shuffled_unfilled_cells(board):
-            sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
-            sys.stdout.flush()
+            if DEBUG:
+                sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+                sys.stdout.flush()
 
             candidates = construct_candidates(board, x, y)
             for candidate in candidates:
@@ -187,8 +188,9 @@ def solution_unique(board):
                 return False
             continue
         x, y = get_unfilled_cell_rand(board)
-        sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
-        sys.stdout.flush()
+        if DEBUG:
+            sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+            sys.stdout.flush()
 
         candidates = construct_candidates(board, x, y)
         for candidate in candidates:
@@ -242,11 +244,12 @@ def create_solution(input_q, output_q):
         try:
             board, ct = board
             output_q.put((backtrack_iter(board), ct))
-            print("\nCreated Solution {}".format(ct))
+            # print("\nCreated Solution {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("$$ puzzle_q is full!\r")
-            sys.stdout.flush()
+            if DEBUG:
+                sys.stdout.write("$$ puzzle_q is full!\r")
+                sys.stdout.flush()
 
 
 def create_puzzle(input_q, output_q):
@@ -256,11 +259,12 @@ def create_puzzle(input_q, output_q):
         puzzle = sol.copy()
         try:
             output_q.put((create_puzzle_from_board(puzzle), sol, ct,))
-            print("\nCreated Puzzle {}".format(ct))
+            # print("\nCreated Puzzle {}".format(ct))
             input_q.task_done()
         except queue.Full:
-            sys.stdout.write("## db_q is full!\r")
-            sys.stdout.flush()
+            if DEBUG:
+                sys.stdout.write("## db_q is full!\r")
+                sys.stdout.flush()
 
 
 def to_db(input_q, db_batch_size):
@@ -322,8 +326,9 @@ def main(n_jobs, queue_size=100):
             enqueued += 1
             print("== {} job(s) enqueued".format(enqueued))
         else:
-            sys.stdout.write("== sol_q is full!\r")
-            sys.stdout.flush()
+            if DEBUG:
+                sys.stdout.write("== sol_q is full!\r")
+                sys.stdout.flush()
     sol_q.join()
     print("Solution process shutdown.")
     puzzle_q.join()
