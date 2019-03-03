@@ -4,8 +4,8 @@ import os
 import psycopg2
 
 
-DB_NAME = "sudoku"
-PG_SERVER = "postgres://localhost:5432/"
+DB_NAME = os.environ.get("SUDOKU_DB_NAME", "sudoku")
+PG_SERVER = os.environ.get("PG_CONN", "postgres://localhost:5432/")
 DB_CONN = os.path.join(PG_SERVER, DB_NAME)
 
 
