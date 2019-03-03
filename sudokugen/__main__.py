@@ -1,10 +1,17 @@
 import sys
 import numpy as np
+from .client import client
+from .db import setup_db
 from .gen_sol import (main, backtrack_iter, create_puzzle_from_board,
     starting_board)
-from .client import client
 
 if __name__ == "__main__":
+    try:
+        sys.argv[1]
+    except IndexError:
+        print('Valid options are "play", "solve", "gen" and "genmany"')
+        sys.exit(0)
+
     if sys.argv[1] == "play":
         sys.exit(client() or 0)     
     elif sys.argv[1] == "solve":
@@ -17,9 +24,13 @@ if __name__ == "__main__":
         puzzle = create_puzzle_from_board(backtrack_iter(board))
         print(puzzle)
         sys.exit(0)
-    else:
+    elif sys.argv[1] == "genmany":
+        setup_db()
         try:
             n_jobs = int(sys.argv[1])
         except (IndexError, ValueError):
             n_jobs = None 
         sys.exit(main(n_jobs) or 0)
+    else:
+        print('Valid options are "play", "solve", "gen" and "genmany"')
+        sys.exit(0)
