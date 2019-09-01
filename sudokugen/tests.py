@@ -117,7 +117,7 @@ def test_remove_candidates_from_line():
         (1, 1): {1, 2, 4, 3},
         (1, 2): {3, 4, 5},
         (1, 8): {2, 4, 5},
-    } 
+    }
     lineno, n = 1, 4
     expected = {
         (1, 1): {1, 2, 4, 3},

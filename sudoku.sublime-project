@@ -1,0 +1,15 @@
+{
+	"folders":
+	[
+		{
+            "path": "sudokugen",
+            "follow_symlinks": true
+		}
+	],
+    "SublimeLinter.linters.pylint.lint_mode": "load_save",
+    "SublimeLinter.linters.pylint.executable": "/Users/kevinliu/anaconda3/envs/sudoku/bin/pylint",
+    "settings": {
+        "python_interpreter": "/Users/kevinliu/anaconda3/envs/sudoku/bin/python",
+        "tab_size": 4
+    }
+}

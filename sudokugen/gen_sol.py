@@ -118,7 +118,7 @@ def get_shuffled_unfilled_cells(board):
         np.random.shuffle(zero_indices)
     else:
         raise IndexError("No unfilled cell remaining!")
-    return zero_indices 
+    return zero_indices
 
 
 def propagate_constraint(board):
@@ -126,12 +126,12 @@ def propagate_constraint(board):
         one choice remaining after applying the
         previous guess"""
     while True:
-        cont = False 
+        cont = False
         candidates = candidates_dict(board)
         for (x, y), cands in candidates.items():
             if len(cands) == 1:
                 board[(x, y)] = cands.pop()
-                cont = True 
+                cont = True
                 break
         if not cont:
             break
@@ -147,7 +147,7 @@ def backtrack_iter(board):
         except IndexError:
             print("No solution.")
             return
-        
+
         for x, y in get_shuffled_unfilled_cells(board):
             if DEBUG:
                 sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))

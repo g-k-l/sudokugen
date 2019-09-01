@@ -139,11 +139,11 @@ def candidate_line(candidates):
             if len(x_indices) == 1:
                 lineno = x_indices[0]
                 remove_candidates_from_line(candidates, n, lineno, cands)
-                sentinel = True 
+                sentinel = True
             elif len(y_indices) == 1:
                 lineno = y_indices[0] + 9
-                remove_candidates_from_line(candidates, n, lineno, cands) 
-                sentinel = True 
+                remove_candidates_from_line(candidates, n, lineno, cands)
+                sentinel = True
     return sentinel
 
 
@@ -284,7 +284,7 @@ REDUCTIONS = [
     hidden_combos,
     x_wing,
     swordfish,
-    nishio_search, 
+    nishio_search,
 ]
 
 TIERS = {
@@ -309,7 +309,7 @@ def solve(puzzle):
         success = move(puzzle, candidates)
         if success:
             history.append((copy, move))
-            continue 
+            continue
         else:
             stuck = True
             for reduction in enumerate(REDUCTIONS):

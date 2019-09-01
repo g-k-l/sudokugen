@@ -52,7 +52,7 @@ def insert_solutions(boards, cursor):
     insert = """
         INSERT INTO solution (board) VALUES {};
     """
-    as_values_query = ["('{}')".format(board_str) 
+    as_values_query = ["('{}')".format(board_str)
         for board_str in uniques_only(boards, cursor)]
     rows = ",\n".join(as_values_query)
     cursor.execute(insert.format(rows))

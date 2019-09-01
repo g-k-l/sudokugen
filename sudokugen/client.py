@@ -1,6 +1,6 @@
 """
 This is a curses interface for the sudoku
-game which can be accessed by providing "play" 
+game which can be accessed by providing "play"
 as the first argument to __main__.py.
 """
 import sys, os
@@ -98,7 +98,7 @@ def draw_menu(stdscr):
             else:
                 status_msg = 'Submission incorrect.'
 
-        cycle_colors = cycle([curses.color_pair(2), curses.color_pair(3)])        
+        cycle_colors = cycle([curses.color_pair(2), curses.color_pair(3)])
         empty_space_padding = " "*(cell_width)
         for cell_y, cell_x in cell_corners:
             color_pair = next(cycle_colors)
