@@ -63,9 +63,21 @@ def test_get_unfilled_cell_all_filled():
     with pytest.raises(IndexError):
         gen_sol.get_unfilled_cell_rand(board)
 
-
+@pytest.mark.timeout(5, "too slow", method="thread")
 def test_backtrack_iter():
-    board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
+    # use a partially solved board so that the tests
+    # do not run for too long.
+    board = np.array(
+      [[0, 3, 6, 8, 9, 2, 7, 1, 5],
+       [5, 0, 2, 0, 7, 1, 9, 0, 3],
+       [9, 0, 7, 5, 6, 3, 4, 8, 2],
+       [0, 4, 3, 1, 5, 8, 2, 0, 7],
+       [8, 5, 9, 6, 0, 7, 1, 3, 0],
+       [7, 2, 0, 9, 3, 4, 8, 5, 6],
+       [0, 0, 0, 2, 8, 6, 5, 0, 1],
+       [0, 0, 0, 3, 1, 0, 0, 4, 9],
+       [0, 0, 0, 7, 4, 9, 3, 2, 8]], int)
+    # board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
     sol = gen_sol.backtrack_iter(board)
     assert len(np.argwhere(sol == 0)) == 0
     gen_sol.assert_board_is_valid(sol)

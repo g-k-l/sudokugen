@@ -13,6 +13,7 @@ import math
 import multiprocessing as mp
 import queue
 import sys
+import time
 
 import numpy as np
 
@@ -138,11 +139,14 @@ def propagate_constraint(board):
 
 
 def backtrack_iter(board):
+    start = time.perf_counter()
     stack = [board]
     while True:
         try:
             board = stack.pop()
             if is_filled(board):
+                end = time.perf_counter()
+                print("Time to generate 1 puzzle: %.2f" % (end-start))
                 return board
         except IndexError:
             print("No solution.")
