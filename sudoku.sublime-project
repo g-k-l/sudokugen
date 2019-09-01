@@ -2,8 +2,7 @@
 	"folders":
 	[
 		{
-            "path": "sudokugen",
-            "follow_symlinks": true
+            "path": ".",
 		}
 	],
     "SublimeLinter.linters.pylint.lint_mode": "load_save",
