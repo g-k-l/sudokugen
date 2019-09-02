@@ -8,17 +8,22 @@ the DFS/backtracking solver:
 http://norvig.com/sudoku.html
 """
 from collections import defaultdict
-from functools import lru_cache
+from functools import wraps, lru_cache
 import math
 import multiprocessing as mp
+import logging
 import queue
+import random
 import sys
 import time
 
 import numpy as np
 
 from .db import insert_solutions, insert_puzzles, get_conn
-from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG, BLOCK_ARRAY
+from .constants import BOARD_DIM, COMPLETE_ROW, DEBUG, BLOCK_ARRAY, EMPTY
+
+logger = logging.getLogger(__name__)
+
 
 
 def assert_sol_is_valid(sol):
@@ -91,37 +96,51 @@ def choices_from_square(board, x, y):
     return COMPLETE_ROW - numbers_in_g
 
 
-def candidates_dict(puzzle):
-    """
-    Construct the "Pencil Marks" for puzzle.
-    """
+class SudokuBaseException(Exception):
+    pass
+
+
+class InvalidBoard(SudokuBaseException):
+    pass
+
+
+class NoSolution(SudokuBaseException):
+    pass
+
+
+def candidates_dict(board):
     candidates = defaultdict(set)
-    x_matrix, y_matrix = np.indices((9, 9))
-    for x_arr, y_arr in zip(x_matrix, y_matrix):
-        for x, y in zip(x_arr, y_arr):
-            if puzzle[(x, y)] != 0:
-                continue
-            candidates[(x, y)] = construct_candidates(puzzle, x, y)
+    it = board.flat # C-style indexed iterator
+    coords = it.coords
+    for cell in it:
+        if cell == EMPTY:
+            candidates[coords] = construct_candidates(board, *coords)
+        coords = it.coords
     return candidates
 
 
 def construct_candidates(board, x, y):
     """
-    Get eligible candidates for the cell at (x, y)
+    Return a set of eligible candidates for the cell at (x, y).
+    Raises NoSolution if x, y has no candidate, implying
+    that the given board has no solution.
     """
-    possible_from_row = COMPLETE_ROW - set(board[x, :])
-    possible_from_col = COMPLETE_ROW - set(board[:, y])
-    possible_from_square = choices_from_square(board, x, y)
-    if DEBUG:
-        print("================")
-        print(board)
-        print("x: ", x)
-        print("y: ", y)
-        print("from rows:", possible_from_row)
-        print("from cols:", possible_from_col)
-        print("from block:", possible_from_square)
-        print(possible_from_col & possible_from_row & possible_from_square)
-    return possible_from_col & possible_from_row & possible_from_square
+    from_row = COMPLETE_ROW - set(board[x, :])
+    from_col = COMPLETE_ROW - set(board[:, y])
+    from_square = choices_from_square(board, x, y)
+    candidates = from_row & from_col & from_square
+    # if DEBUG:
+    #     print("================")
+    #     print(board)
+    #     print("x: ", x)
+    #     print("y: ", y)
+    #     print("from rows:", from_row)
+    #     print("from cols:", from_col)
+    #     print("from block:", from_square)
+    #     print("candidates:", candidates)
+    if not candidates:
+        raise NoSolution("Cell (%d, %d) has no candidate" % (x, y))
+    return candidates
 
 
 def get_unfilled_cell_rand(board):
@@ -159,34 +178,94 @@ def propagate_constraint(board):
             break
 
 
+def from_empty_board():
+    """
+    To produce a complete sudoku board from scratch:
+        1. Fill in 20 cells randomly to create a baseline puzzle
+        2. Attempt to create a solution from the baseline puzzle
+
+    *According the Skiena, 17 is the fewest known number of positions
+    in any sudoku that has a unique solution.
+
+    The choice of randomly selecting 20 cells is to reduce
+    the search space and hence the runtime of creating a complete
+    sudoku board. Attempting to generate a solution from, say, an
+    empty board directly can lead to very unpredictable runtimes,
+    depending on the luck of the RNG.
+
+    Note, there's no guarantee that a solution exists given the
+    20 random choices, so the function could return None.
+    """
+    board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
+    guess_until = 20
+    while np.count_nonzero(board) < guess_until:
+        x, y = get_unfilled_cell_rand(board)
+        candidates = construct_candidates(board, x, y)
+        board[x, y] = random.choice(list(candidates))
+    return backtrack_iter(board)
+
+
+def measure(log):
+    def inner(func):
+        @wraps(func)
+        def decorator(*args, **kwargs):
+            start = time.perf_counter()
+            ret = func(*args, **kwargs)
+            end = time.perf_counter()
+            log.info("%s: %.2f" % (func.__name__, end-start))
+            return ret
+        return decorator
+    return inner
+
+
 def backtrack_iter(board):
-    start = time.perf_counter()
+    """
+    Implements DFS-style backtracking to obtain
+    a solution to the given board.
+    """
+    if not assert_board_is_valid(board):
+        raise InvalidBoard("Provided board violates Sudoku rules.")
+
+    pruned = set() # keep track of pruned nodes
     stack = [board]
-    while True:
+    while stack:
+        board = stack.pop()
+
+        if DEBUG:
+            msg = "# filled: %d, stack size: %d, # pruned root nodes: %d\r"
+            sys.stdout.write(msg % (
+                np.count_nonzero(board), len(stack), len(pruned)))
+            sys.stdout.flush()
+
+        # exit when a solution is found
+        # i.e. when all the cells have been filled
+        if is_filled(board):
+            return board
+
+        # if we encounter cells with no possible values
+        # when generating candidates, then the current
+        # board has no solution. Do not go further down the path
         try:
-            board = stack.pop()
-            if is_filled(board):
-                end = time.perf_counter()
-                print("Time to generate 1 puzzle: %.2f" % (end-start))
-                return board
-        except IndexError:
-            print("No solution.")
-            return
+            candidates = candidates_dict(board)
+        except NoSolution:
+            pruned.add(tuple(board.flat))
+            continue
 
-        for x, y in get_shuffled_unfilled_cells(board):
-            if DEBUG:
-                sys.stdout.write("# filled: {}\r".format(
-                    np.count_nonzero(board)))
-                sys.stdout.flush()
+        # push the least-constrained options first
+        # so that the most-constrained options are processed first
+        by_constraint = sorted(
+            candidates.items(), key=lambda item: len(item[1]), reverse=True)
 
-            candidates = construct_candidates(board, x, y)
-            for candidate in candidates:
-                copied = board.copy()
-                copied[x, y] = candidate
-                propagate_constraint(copied)
-                stack.append(copied)
-            if candidates:
-                break
+        for coords, cands in by_constraint:
+            for cand in cands:
+                next_board = board.copy()
+                next_board[coords] = cand
+                if tuple(next_board.flat) not in pruned:
+                    stack.append(next_board)
+
+    # if the stack is exhausted, then there is,
+    # in fact, no solution to the posed problem
+    return
 
 
 def board_in_solutions(board, solutions):
@@ -216,7 +295,8 @@ def solution_unique(board):
             continue
         x, y = get_unfilled_cell_rand(board)
         if DEBUG:
-            sys.stdout.write("# filled: {}\r".format(np.count_nonzero(board)))
+            sys.stdout.write("# filled: %d, stack size %d\r" % (
+                np.count_nonzero(board), len(stack)))
             sys.stdout.flush()
 
         candidates = construct_candidates(board, x, y)
@@ -227,19 +307,19 @@ def solution_unique(board):
             stack.append(copied)
 
 
-def prefill_diagonals(board):
-    """
-    Fill the diagonal squares (groups 0, 4, 8)
-    first prior to backtracking to reduce the
-    problem space.
-    """
-    groups, __ = squares()
-    for n in (0, 4, 8):
-        arr = np.arange(1, 10)
-        np.random.shuffle(arr)
-        for (x, y), k in zip(groups[n], arr):
-            board[x, y] = k
-    return board
+# def prefill_diagonals(board):
+#     """
+#     Fill the diagonal squares (groups 0, 4, 8)
+#     first prior to backtracking to reduce the
+#     problem space.
+#     """
+#     groups, __ = squares()
+#     for n in (0, 4, 8):
+#         arr = np.arange(1, 10)
+#         np.random.shuffle(arr)
+#         for (x, y), k in zip(groups[n], arr):
+#             board[x, y] = k
+#     return board
 
 
 def create_puzzle_from_board(board):

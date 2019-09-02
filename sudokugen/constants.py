@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+EMPTY = 0
 BOARD_DIM = 9
 COMPLETE_ROW = set(range(1, BOARD_DIM+1))
 try:

@@ -1,4 +1,7 @@
 import asyncio
+from io import StringIO
+import logging
+import time
 
 import numpy as np
 import pytest
@@ -10,6 +13,18 @@ from . import gen_sol
 from . import solve
 from . import transform as tf
 
+
+@pytest.fixture
+def logfile():
+    return StringIO()
+
+
+@pytest.fixture
+def logger(logfile):
+    log = gen_sol.logger
+    log.addHandler(logging.StreamHandler(logfile))
+    log.setLevel(logging.DEBUG)
+    return log
 
 
 @pytest.fixture
@@ -70,6 +85,26 @@ def easy_board():
 
 @pytest.fixture
 def hard_board():
+    """
+    This is Skiena's example of a hard Sudoku puzzle
+    (as in, difficult for a computer and impossible for
+     a human to solve). See "The Algorithm Design Manual"
+     Chapter 7 Section 3 for more details.
+    """
+    return np.array(
+      [[0, 0, 0, 0, 0, 0, 0, 1, 2],
+       [0, 0, 0, 0, 3, 5, 0, 0, 0],
+       [0, 0, 0, 6, 0, 0, 0, 7, 0],
+       [7, 0, 0, 0, 0, 0, 3, 0, 0],
+       [0, 0, 0, 4, 0, 0, 8, 0, 0],
+       [1, 0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 1, 2, 0, 0, 0, 0],
+       [0, 8, 0, 0, 0, 0, 0, 4, 0],
+       [0, 5, 0, 0, 0, 0, 6, 0, 0]], int)
+
+
+@pytest.fixture
+def sparse_board():
     return np.array(
       [[0, 0, 0, 0, 0, 0, 0, 0, 0],
        [0, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -90,8 +125,8 @@ def test_squares_group():
     assert (4, 8) in groups[5]
 
 
-def test_squares_choices(hard_board):
-    board = hard_board
+def test_squares_choices(sparse_board):
+    board = sparse_board
     choices = gen_sol.choices_from_square
     assert choices(board, 8, 1) == {1, 2, 3, 4, 7, 8, 9}
     assert choices(board, 0, 7) == {1, 2, 3, 4, 5, 6, 7, 8, 9}
@@ -127,15 +162,39 @@ def test_get_unfilled_cell_all_filled():
     with pytest.raises(IndexError):
         gen_sol.get_unfilled_cell_rand(board)
 
-@pytest.mark.timeout(5, "too slow", method="thread")
-def test_backtrack_iter(easy_board):
+
+def test_measure(logfile, logger):
+    @gen_sol.measure(logger)
+    def myfunc(a, b=2):
+        time.sleep(3.2)
+        return a, b
+    a, b = myfunc(4)
+    assert a == 4 and b == 2
+
+    log_content = logfile.getvalue()
+    assert myfunc.__name__ in log_content
+    # output time will be slightly more than 3.2, but not 0.1 more
+    assert "3.2" in log_content
+
+
+def test_backtrack_iter_basic(easy_board):
     # use a partially solved board so that the tests
     # do not run for too long.
-    board = easy_board
-    # board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
-    sol = gen_sol.backtrack_iter(board)
+    sol = gen_sol.backtrack_iter(easy_board)
     assert len(np.argwhere(sol == 0)) == 0
     gen_sol.assert_sol_is_valid(sol)
+
+
+# def test_backtrack_iter(hard_board):
+#     sol = gen_sol.backtrack_iter(hard_board)
+#     assert len(np.argwhere(sol == 0)) == 0
+#     gen_sol.assert_sol_is_valid(sol)
+
+
+# def test_from_empty_board():
+#     sol = gen_sol.from_empty_board()
+#     assert len(np.argwhere(sol == 0)) == 0
+#     gen_sol.assert_sol_is_valid(sol)
 
 
 def test_x_translate(board):
