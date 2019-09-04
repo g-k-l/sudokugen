@@ -106,7 +106,7 @@ def eliminate(cands_of, k, val):
 def init_cands_of(puzzle):
     cands_of = {k: set(COMPLETE_ROW) for k in range(SIZE)}
     for k, val in enumerate(puzzle):
-        if val == 0:
+        if val == EMPTY:
             continue
         assign(cands_of, k, val)
 
