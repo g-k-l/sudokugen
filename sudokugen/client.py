@@ -3,12 +3,9 @@ This is a curses interface for the sudoku
 game which can be accessed by providing "play"
 as the first argument to __main__.py.
 """
-import sys, os
 import curses
 import curses.ascii
 from itertools import cycle, chain
-
-import psycopg2
 
 from .db import get_conn, get_puzzle
 
