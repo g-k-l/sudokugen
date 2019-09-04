@@ -50,10 +50,13 @@ BLOCK_INDICES = block_indices()
 
 COMPLETE_ROW = {n+1 for n in range(DIM)}
 
+# "k" is the unique label for a cell, a number from 0 to 80
+# A cell can belong to three units: the row, column, and block unit.
 UNITS_OF = {
     k: [ROW_INDICES[k // DIM], COL_INDICES[k % DIM], BLOCK_INDICES[block(k)]]
     for k in range(SIZE)
 }
+# A cell's peers consists of the set of all cells in its row, column, and block.
 PEERS_OF = {
     k: (ROW_INDICES[k // DIM] | COL_INDICES[k % DIM] | BLOCK_INDICES[block(k)]) - {k}
     for k in range(SIZE)
@@ -79,7 +82,14 @@ def assign(cands_of, k, val):
 
 
 def eliminate(cands_of, k, val):
-    """Eliminate val from cands_of[k]"""
+    """
+    Eliminate val from cands_of[k]
+
+    (1) If a square has only one possible value,
+        then eliminate that value from the square's peers.
+    (2) If a unit has only one possible place for a value,
+        then put the value there.
+    """
     if val not in cands_of[k]:
         return cands_of
 
