@@ -21,11 +21,17 @@ def empty_puzzle():
 
 
 def block(k):
+    """Given a cell label (0-81), return
+    the 3x3 block for which it is in
+        """
     r, c = (k // DIM), (k % DIM)
     return (r // 3) + 3*(c // 3)
 
 
 def block_indices():
+    """Returns a dict where keys are block labels
+        (int from 0-8) and vals are the cell labels
+        that belong to the block"""
     blocks = defaultdict(set)
     for k in range(SIZE):
         r, c = (k // DIM), (k % DIM)
@@ -36,6 +42,9 @@ def block_indices():
 
 
 def indices():
+    """Returns two dicts, where the keys are
+        row/col labels and the vals are cell labels
+        which belong to the corresponding row/col."""
     rows = defaultdict(set)
     cols = defaultdict(set)
     for k in range(SIZE):
@@ -89,6 +98,12 @@ def eliminate(cands_of, k, val):
         then eliminate that value from the square's peers.
     (2) If a unit has only one possible place for a value,
         then put the value there.
+
+    :cands_of: dict. keys are cell labels (int) and
+        vals are sets of ints, representing possible
+        values for the cell.
+    :k: the cell label (int)
+    :val: the val to eliminate from cands_of[k] (int)
     """
     if val not in cands_of[k]:
         return cands_of
@@ -111,9 +126,19 @@ def eliminate(cands_of, k, val):
             (loc,) = locs
             assign(cands_of, loc, val)
             return cands_of
+    return cands_of
 
 
 def init_cands_of(puzzle):
+    """
+    Given the puzzle's state, create its candidate
+    dict by assigning cells which already have values.
+
+    For a puzzle having unique solution, a single application
+    of this function leads to a complete solution.
+
+    :puzzle: a list of ints, each of which is from 0 to 9
+    """
     cands_of = {k: set(COMPLETE_ROW) for k in range(SIZE)}
     for k, val in enumerate(puzzle):
         if val == EMPTY:
@@ -124,6 +149,8 @@ def init_cands_of(puzzle):
 
 
 def is_solved(cands_of):
+    """A puzzle is solved if its candidate
+        dict has only one candidate for each cell"""
     for vals in cands_of.values():
         if len(vals) > 1:
             return False
@@ -131,6 +158,10 @@ def is_solved(cands_of):
 
 
 def solve(puzzle):
+    """For puzzles which are not known to have unique
+    solutions, use this function, which implements
+    DFS-backtracking, searching solutions by guessing
+    values in most-constrained cells first."""
     stack = [init_cands_of(puzzle)]
     while stack:
         cands_of = stack.pop()
@@ -139,7 +170,7 @@ def solve(puzzle):
             return cands_of
 
         by_constraint = [(k, cands) for k, cands in
-            sorted(cands_of.items(), key=lambda item: len(item[1]), reverse=True)]
+                         sorted(cands_of.items(), key=lambda item: len(item[1]), reverse=True)]
 
         for k, cands in by_constraint:
             for val in cands:
@@ -147,4 +178,3 @@ def solve(puzzle):
                 assign(next_cands_of, k, val)
                 stack.append(next_cands_of)
     raise NoSolution("contradiction")
-
