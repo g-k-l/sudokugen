@@ -10,7 +10,8 @@ from enum import Enum
 import random
 
 from .solver import (empty_puzzle, init_cands_of, assign, dfs,
-                     maybe_conv_inv, SudokuBaseException, NoSolution, SIZE)
+                     maybe_conv_inv, SudokuBaseException, NoSolution,
+                     SIZE, DIM)
 
 
 class Difficulty(Enum):
@@ -64,3 +65,58 @@ def generate(difficulty=Difficulty.MEDIUM, max_retries=10):
     raise MaxRetriesExceeded(
         "Attempted %s times to generate puzzle with %s"
         % (max_retries, difficulty))
+
+
+"""
+The following functions allow us to generate
+perceptually different puzzles from existing
+puzzles via transformations such as rotation
+and shuffling value labels.
+"""
+
+def row_translate(puzzle, times=1):
+    for __ in range(times):
+        puzzle = puzzle[27:] + puzzle[:27]
+    return puzzle
+
+
+def col_translate(puzzle, times=1):
+    for __ in range(times):
+        for row_num in len(DIM):
+            puzzle[row_num] = puzzle[row_num][3:] + puzzle[row_num][:3]
+    return puzzle
+
+
+# def rotate(board, times=1):
+#     return np.rot90(board, k=times)
+
+
+# def mirror_x(board):
+#     return np.flipud(board)
+
+
+# def mirror_y(board):
+#     return np.fliplr(board)
+
+
+# def mirror_major_diagonal(board):
+#     raise NotImplementedError("Equivalent to rotate + mirror.")
+
+
+# def mirror_minor_diagonal(board):
+#     raise NotImplementedError("Equivalent to rotate + mirror.")
+
+
+def shuffle_numbers(puzzle):
+    """
+    Produce one of 9!-1 (362879) equivalent
+    puzzles from the original by mapping
+    each number to a different number.
+    """
+    num_map = dict(zip(range(1, 10), random.shuffle(range(1,10))))
+    for k in range(len(SIZE)):
+        if puzzle[k] == 0:
+            continue
+        puzzle[k] = num_map[puzzle[k]]
+    return puzzle
+
