@@ -9,6 +9,7 @@ http://norvig.com/sudoku.html
 
 from collections import defaultdict
 from copy import deepcopy
+from itertools import chain
 
 EMPTY = 0
 DIM = 9
@@ -183,7 +184,17 @@ def init_cands_of(puzzle):
 
     :puzzle: a list of ints, each of which is from 0 to 9
 
-    >>> puzzle = []
+    >>> puzzle = empty_puzzle()
+    >>> puzzle[3] = 1; puzzle[4] = 2
+    >>> cands_of = init_cands_of(puzzle)
+    >>> cands_of[3] == {1}
+    True
+    >>> cands_of[4] == {2}
+    True
+    >>> cands_of[5] == {3, 4, 5, 6, 7, 8, 9} # same block as cells 3 and 4
+    True
+    >>> cands_of[31] == {1, 3, 4, 5, 6, 7, 8, 9} # same col as cell 4
+    True
     """
     cands_of = {k: set(COMPLETE_ROW) for k in range(SIZE)}
     for k, val in enumerate(puzzle):
@@ -203,17 +214,90 @@ def is_solved(cands_of):
     return True
 
 
-def solve(puzzle):
-    """For puzzles which are not known to have unique
-    solutions, use this function, which implements
-    DFS-backtracking, searching solutions by guessing
-    values in most-constrained cells first."""
+def maybe_conv(l):
+    """
+    Flattens l if l is a list or a tuple.
+
+    >>> l = [[1, 2, 3], [4, 5, 6]]
+    >>> maybe_conv(l)
+    [1, 2, 3, 4, 5, 6]
+
+    >>> l = [1, 2, 3, 4]
+    >>> maybe_conv(l)
+    [1, 2, 3, 4]
+    """
+    if isinstance(l[0], list) or isinstance(l[0], tuple):
+        return list(chain(*l))
+    return l
+
+
+def maybe_conv_inv(l):
+    """
+    Converts a list of ints to a list of list, each
+    having 9 elements.
+
+    >>> l = [1, 2, 3, 4, 5, 6, 7, 8, 9]*9
+    >>> conv_l = maybe_conv_inv(l)
+    >>> conv_l == [[1, 2, 3, 4, 5, 6, 7, 8, 9] for __ in range(9)]
+    True
+    """
+    if isinstance(l[0], list) or isinstance(l[0], tuple):
+        return l
+    ret = []
+    for k in range(len(l)):
+        if (k // DIM) >= len(ret):
+            ret.append([])
+        ret[k // DIM].append(l[k])
+    return ret
+
+
+def solve(given):
+    """
+    Solve the given puzzle. If the puzzle has no solution,
+    then raise NoSolution(...).
+
+    >>> puzzle = [[0, 3, 6, 8, 9, 2, 7, 1, 5],
+    ...           [5, 0, 2, 0, 7, 1, 9, 0, 3],
+    ...           [9, 0, 7, 5, 6, 3, 4, 8, 2],
+    ...           [0, 4, 3, 1, 5, 8, 2, 0, 7],
+    ...           [8, 5, 9, 6, 0, 7, 1, 3, 0],
+    ...           [7, 2, 0, 9, 3, 4, 8, 5, 6],
+    ...           [0, 0, 0, 2, 8, 6, 5, 0, 1],
+    ...           [0, 0, 0, 3, 1, 0, 0, 4, 9],
+    ...           [0, 0, 0, 7, 4, 9, 3, 2, 8]]
+    >>> solution = solve(puzzle)
+    >>> solution == [[4, 3, 6, 8, 9, 2, 7, 1, 5],
+    ...              [5, 8, 2, 4, 7, 1, 9, 6, 3],
+    ...              [9, 1, 7, 5, 6, 3, 4, 8, 2],
+    ...              [6, 4, 3, 1, 5, 8, 2, 9, 7],
+    ...              [8, 5, 9, 6, 2, 7, 1, 3, 4],
+    ...              [7, 2, 1, 9, 3, 4, 8, 5, 6],
+    ...              [3, 9, 4, 2, 8, 6, 5, 7, 1],
+    ...              [2, 7, 8, 3, 1, 5, 6, 4, 9],
+    ...              [1, 6, 5, 7, 4, 9, 3, 2, 8]]
+    True
+
+    Typically, for a puzzle having unique solution,
+    the puzzle is solved in the first step of the
+    search.
+
+    For puzzles which are not known to have unique
+    solutions, search for solutions via DFS-backtracking
+    by guessing values in the most-constrained cells first.
+    """
+    puzzle = maybe_conv(given)
+    conved = puzzle != given
+
     stack = [init_cands_of(puzzle)]
     while stack:
         cands_of = stack.pop()
 
         if is_solved(cands_of):
-            return cands_of
+            sol = [cands_of[k].pop() for k in range(SIZE)]
+            if conved:
+                return maybe_conv_inv(sol)
+            else:
+                return sol
 
         by_constraint = [(k, cands) for k, cands in
                          sorted(cands_of.items(), key=lambda item: len(item[1]), reverse=True)]
@@ -230,6 +314,7 @@ def solve(puzzle):
                 else:
                     stack.append(next_cands_of)
     raise NoSolution("contradiction")
+
 
 if __name__ == "__main__":
     import doctest
