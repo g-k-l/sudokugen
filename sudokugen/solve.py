@@ -135,7 +135,7 @@ def init_cands_of(puzzle):
     dict by assigning cells which already have values.
 
     For a puzzle having unique solution, a single application
-    of this function leads to a complete solution.
+    of this function (usually) leads to a complete solution.
 
     :puzzle: a list of ints, each of which is from 0 to 9
     """
@@ -175,6 +175,12 @@ def solve(puzzle):
         for k, cands in by_constraint:
             for val in cands:
                 next_cands_of = deepcopy(cands_of)
-                assign(next_cands_of, k, val)
-                stack.append(next_cands_of)
+                try:
+                    assign(next_cands_of, k, val)
+                except NoSolution:
+                    # the value leads to a dead-end,
+                    # do not append it to the stack
+                    continue
+                else:
+                    stack.append(next_cands_of)
     raise NoSolution("contradiction")
