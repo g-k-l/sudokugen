@@ -2,11 +2,7 @@
 
 ## Finish Cleanup
 
-Port tests for solve.py. Port transform to eliminate numpy dependency.
-
-## Puzzle Generation
-
-Create puzzles from scratch by assigning at least 17 cells in the beginning, with at least 8 distinct numbers.
+Port transform to eliminate numpy dependency.
 
 ## Evaluating Difficulty
 

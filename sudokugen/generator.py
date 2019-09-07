@@ -10,8 +10,8 @@ from enum import Enum
 import random
 
 from .solver import (empty_puzzle, init_cands_of, assign, dfs,
-                     maybe_conv_inv, SudokuBaseException, NoSolution,
-                     SIZE, DIM)
+                     maybe_conv_inv, maybe_conv, SudokuBaseException,
+                     NoSolution, SIZE, DIM)
 
 
 class Difficulty(Enum):
@@ -46,10 +46,13 @@ def generate(difficulty=Difficulty.MEDIUM, max_retries=10):
         try:
             # randomly assign cell values based on difficulty
             for __ in range(difficulty.value):
-                rand_cell = random.choice(
-                    [k for k in cands_of.keys() if len(cands_of[k]) > 1])
-                rand_val = random.choice(list(cands_of[rand_cell]))
-                assign(cands_of, rand_cell, rand_val)
+                uncertain_cells = [k for k in cands_of.keys() if len(cands_of[k]) > 1]
+                if uncertain_cells:
+                    rand_cell = random.choice(uncertain_cells)
+                    rand_val = random.choice(list(cands_of[rand_cell]))
+                    assign(cands_of, rand_cell, rand_val)
+                else:
+                    break
         except NoSolution:
             continue
         else:
@@ -75,9 +78,10 @@ and shuffling value labels.
 """
 
 def row_translate(puzzle, times=1):
+    puzzle = maybe_conv(puzzle)
     for __ in range(times):
         puzzle = puzzle[27:] + puzzle[:27]
-    return puzzle
+    return maybe_conv_inv(puzzle)
 
 
 def col_translate(puzzle, times=1):
@@ -85,26 +89,6 @@ def col_translate(puzzle, times=1):
         for row_num in len(DIM):
             puzzle[row_num] = puzzle[row_num][3:] + puzzle[row_num][:3]
     return puzzle
-
-
-# def rotate(board, times=1):
-#     return np.rot90(board, k=times)
-
-
-# def mirror_x(board):
-#     return np.flipud(board)
-
-
-# def mirror_y(board):
-#     return np.fliplr(board)
-
-
-# def mirror_major_diagonal(board):
-#     raise NotImplementedError("Equivalent to rotate + mirror.")
-
-
-# def mirror_minor_diagonal(board):
-#     raise NotImplementedError("Equivalent to rotate + mirror.")
 
 
 def shuffle_numbers(puzzle):

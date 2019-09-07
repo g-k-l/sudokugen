@@ -1,3 +1,4 @@
+import sys
 from unittest import TestCase
 
 
@@ -106,6 +107,7 @@ class TestSolve(TestCase):
 class TestGenerate(TestCase):
     def test_generate(self):
         for difficulty in Difficulty:
+            # use sys.maxsize to ensure we generate a solution
             puzzle, sol = g.generate(difficulty)
             self.assertTrue(solver.is_valid(puzzle), sol)
             self.assertTrue(solver.is_valid(sol), sol)
@@ -113,3 +115,40 @@ class TestGenerate(TestCase):
     def test_generate_max_retries(self):
         with self.assertRaises(MaxRetriesExceeded):
             g.generate(max_retries=0)
+
+
+class TestTransform(TestCase):
+    def setUp(self):
+        self.puzzle = [[0, 0, 0, 0, 0, 0, 0, 1, 2],
+                       [0, 0, 0, 0, 3, 5, 0, 0, 0],
+                       [0, 0, 0, 6, 0, 0, 0, 7, 0],
+                       [7, 0, 0, 0, 0, 0, 3, 0, 0],
+                       [0, 0, 0, 4, 0, 0, 8, 0, 0],
+                       [1, 0, 0, 0, 0, 0, 0, 0, 0],
+                       [0, 0, 0, 1, 2, 0, 0, 0, 0],
+                       [0, 8, 0, 0, 0, 0, 0, 4, 0],
+                       [0, 5, 0, 0, 0, 0, 6, 0, 0]]
+
+    def test_row_translate(self):
+        t1 = g.row_translate(self.puzzle)
+
+        self.assertEqual(
+            t1,
+            [[7, 0, 0, 0, 0, 0, 3, 0, 0],
+             [0, 0, 0, 4, 0, 0, 8, 0, 0],
+             [1, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 1, 2, 0, 0, 0, 0],
+             [0, 8, 0, 0, 0, 0, 0, 4, 0],
+             [0, 5, 0, 0, 0, 0, 6, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 1, 2],
+             [0, 0, 0, 0, 3, 5, 0, 0, 0],
+             [0, 0, 0, 6, 0, 0, 0, 7, 0]]
+        )
+
+        t11 = g.row_translate(t1)
+        t2 = g.row_translate(self.puzzle, times=2)
+        self.assertEqual(t11, t2)
+
+        t111 = g.row_translate(t11)
+        self.assertEqual(t111, self.puzzle)
+
