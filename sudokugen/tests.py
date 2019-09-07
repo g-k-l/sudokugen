@@ -106,7 +106,8 @@ class TestSolve(TestCase):
 class TestGenerate(TestCase):
     def test_generate(self):
         for difficulty in Difficulty:
-            sol = g.generate(difficulty)
+            puzzle, sol = g.generate(difficulty)
+            self.assertTrue(solver.is_valid(puzzle), sol)
             self.assertTrue(solver.is_valid(sol), sol)
 
     def test_generate_max_retries(self):
