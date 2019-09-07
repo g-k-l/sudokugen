@@ -3,7 +3,7 @@
 	[
 		{
             "path": ".",
-            "folder_exclude_patterns": [".pytest_cache", "*.egg-info", "build"]
+            "folder_exclude_patterns": ["./sudokugen.egg-info", "build"]
 		}
 	],
     "SublimeLinter.linters.pylint.lint_mode": "load_save",

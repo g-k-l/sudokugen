@@ -1,11 +1,16 @@
-import sys
+import doctest
 from unittest import TestCase
 
 
 from . import solver
 from . import generator as g
 from .generator import Difficulty, MaxRetriesExceeded
-# from . import transform as tf
+
+
+def load_tests(loader, tests, ignore):
+    """Allows unittest to run doctests"""
+    tests.addTests(doctest.DocTestSuite(solver))
+    return tests
 
 
 class TestSolve(TestCase):
@@ -107,8 +112,7 @@ class TestSolve(TestCase):
 class TestGenerate(TestCase):
     def test_generate(self):
         for difficulty in Difficulty:
-            # use sys.maxsize to ensure we generate a solution
-            puzzle, sol = g.generate(difficulty)
+            puzzle, sol = g.generate(difficulty, max_retries=50)
             self.assertTrue(solver.is_valid(puzzle), sol)
             self.assertTrue(solver.is_valid(sol), sol)
 
