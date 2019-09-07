@@ -11,6 +11,7 @@ from collections import defaultdict
 from copy import deepcopy
 from itertools import chain
 
+
 EMPTY = 0
 DIM = 9
 SIZE = 81
@@ -106,6 +107,10 @@ class SudokuBaseException(Exception):
 
 
 class NoSolution(SudokuBaseException):
+    pass
+
+
+class InvalidPuzzle(SudokuBaseException):
     pass
 
 
@@ -214,6 +219,15 @@ def is_solved(cands_of):
     return True
 
 
+def is_valid(puzzle):
+    """Ensures that each cell can only contain
+    an integer from 0 to 9."""
+    for val in maybe_conv(puzzle):
+        if val not in list(range(10)):
+            return False
+    return True
+
+
 def maybe_conv(l):
     """
     Flattens l if l is a list or a tuple.
@@ -251,6 +265,39 @@ def maybe_conv_inv(l):
     return ret
 
 
+def dfs(cands_of):
+    """
+    Search for solutions via DFS-backtracking by guessing
+    values in the most-constrained cells first.
+
+    :cands_of: dict of sets, which map cell labels to candidates
+    """
+    stack = [cands_of]
+    while stack:
+        cands_of = stack.pop()
+
+        if is_solved(cands_of):
+            return [cands_of[k].pop() for k in range(SIZE)]
+
+        by_constraint = [(k, cands) for k, cands in
+                         sorted(cands_of.items(), key=lambda item: len(item[1]), reverse=True)]
+
+        for k, cands in by_constraint:
+            if len(cands) == 1:
+                continue
+            for val in cands:
+                next_cands_of = deepcopy(cands_of)
+                try:
+                    assign(next_cands_of, k, val)
+                except NoSolution:
+                    # the value leads to a dead-end,
+                    # do not append it to the stack
+                    continue
+                else:
+                    stack.append(next_cands_of)
+    raise NoSolution("contradiction")
+
+
 def solve(given):
     """
     Solve the given puzzle. If the puzzle has no solution,
@@ -286,35 +333,14 @@ def solve(given):
     solutions, search for solutions via DFS-backtracking
     by guessing values in the most-constrained cells first.
     """
+    if not is_valid(given):
+        raise InvalidPuzzle("Each cell must contain numbers from 0 to 9")
+
     puzzle = maybe_conv(given)
-    conved = puzzle != given
-
-    stack = [init_cands_of(puzzle)]
-    while stack:
-        cands_of = stack.pop()
-
-        if is_solved(cands_of):
-            sol = [cands_of[k].pop() for k in range(SIZE)]
-            if conved:
-                return maybe_conv_inv(sol)
-            else:
-                return sol
-
-        by_constraint = [(k, cands) for k, cands in
-                         sorted(cands_of.items(), key=lambda item: len(item[1]), reverse=True)]
-
-        for k, cands in by_constraint:
-            for val in cands:
-                next_cands_of = deepcopy(cands_of)
-                try:
-                    assign(next_cands_of, k, val)
-                except NoSolution:
-                    # the value leads to a dead-end,
-                    # do not append it to the stack
-                    continue
-                else:
-                    stack.append(next_cands_of)
-    raise NoSolution("contradiction")
+    solution = dfs(init_cands_of(puzzle))
+    if puzzle != given:
+        return maybe_conv_inv(solution)
+    return solution
 
 
 if __name__ == "__main__":
