@@ -2,7 +2,7 @@
 
 ## Finish Cleanup
 
-Add tests to `solve.py`. Document `db.py`. Use `argparse` for `__main__.py`. Remove unnecessary dependencies using a fresh virtual env.
+Port tests for solve.py. Port transform to eliminate numpy dependency.
 
 ## Puzzle Generation
 
