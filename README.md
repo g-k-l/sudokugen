@@ -3,16 +3,16 @@
 Package for solving and generating sudoku puzzles!
 
 ## Setup
-```
-pip install sudokugen
+```shell
+$ pip install sudokugen
 ```
 
 or
 
-```
-git clone https://github.com/g-k-l/sudoku-gen.git
-cd sudoku-gen
-pip install .
+```shell
+$ git clone https://github.com/g-k-l/sudoku-gen.git
+$ cd sudoku-gen
+$ pip install .
 ```
 
 
@@ -37,7 +37,7 @@ pip install .
 ```
 
 And solution looks like:
-```
+```python
 [[4, 3, 6, 8, 9, 2, 7, 1, 5],
  [5, 8, 2, 4, 7, 1, 9, 6, 3],
  [9, 1, 7, 5, 6, 3, 4, 8, 2],
@@ -53,7 +53,6 @@ And solution looks like:
 
 ```python
 from sudokugen.generator import generate, Difficulty
-
 
 new_puzzle = generate(difficulty=Difficulty.MEDIUM)
 ```
