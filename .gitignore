@@ -3,7 +3,6 @@ sudoku.db
 
 # sublime
 sudoku.sublime-workspace
-sudoku.sublime-project
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

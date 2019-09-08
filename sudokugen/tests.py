@@ -1,139 +1,158 @@
-import asyncio
-
-import numpy as np
-import pytest
-
-from . import db
-from . import client
-from .constants import BOARD_DIM, COMPLETE_ROW, BLOCK_ARRAY
-from . import gen_sol
-from . import solve
-from . import transform as tf
+import doctest
+from unittest import TestCase
 
 
-
-@pytest.fixture
-def board():
-    return np.array(
-        [[1, 3, 5, 2, 7, 8, 9, 6, 4],
-         [6, 8, 2, 4, 9, 5, 7, 1, 3],
-         [9, 7, 4, 3, 1, 6, 5, 2, 8],
-         [2, 6, 1, 9, 4, 7, 8, 3, 5],
-         [3, 5, 7, 6, 8, 2, 4, 9, 1],
-         [8, 4, 9, 1, 5, 3, 6, 7, 2],
-         [7, 2, 3, 5, 6, 4, 1, 8, 9],
-         [5, 9, 6, 8, 3, 1, 2, 4, 7],
-         [4, 1, 8, 7, 2, 9, 3, 5, 6]])
+from . import solver
+from . import generator as g
+from .generator import Difficulty, MaxRetriesExceeded
 
 
-def test_squares_group():
-    groups, lookup = gen_sol.squares()
-    assert lookup[(1, 1)] == 0
-    assert lookup[(1, 8)] == 2
-    assert lookup[(8, 1)] == 6
-    assert (4, 8) in groups[5]
+def load_tests(loader, tests, ignore):
+    """Allows unittest to run doctests"""
+    tests.addTests(doctest.DocTestSuite(solver))
+    return tests
 
 
-def test_squares_choices():
-    board = np.array(
-      [[0, 0, 0, 0, 0, 0, 0, 0, 0],
-       [0, 1, 0, 0, 0, 0, 0, 0, 0],
-       [0, 2, 0, 0, 0, 0, 0, 0, 0],
-       [0, 4, 0, 0, 0, 0, 0, 0, 0],
-       [0, 9, 0, 0, 0, 0, 0, 0, 0],
-       [0, 7, 0, 0, 0, 0, 0, 3, 0],
-       [0, 5, 0, 0, 0, 0, 0, 0, 0],
-       [0, 6, 0, 0, 0, 0, 0, 0, 0],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0]])
+class TestSolve(TestCase):
+    def test_easy_board(self):
+        l = [[0, 3, 6, 8, 9, 2, 7, 1, 5],
+             [5, 0, 2, 0, 7, 1, 9, 0, 3],
+             [9, 0, 7, 5, 6, 3, 4, 8, 2],
+             [0, 4, 3, 1, 5, 8, 2, 0, 7],
+             [8, 5, 9, 6, 0, 7, 1, 3, 0],
+             [7, 2, 0, 9, 3, 4, 8, 5, 6],
+             [0, 0, 0, 2, 8, 6, 5, 0, 1],
+             [0, 0, 0, 3, 1, 0, 0, 4, 9],
+             [0, 0, 0, 7, 4, 9, 3, 2, 8]]
 
-    choices = gen_sol.choices_from_square
-    assert choices(board, 8, 1) == {1, 2, 3, 4, 7, 8, 9}
-    assert choices(board, 0, 7) == {1, 2, 3, 4, 5, 6, 7, 8, 9}
-    assert gen_sol.construct_candidates(board, 8, 1) == {3, 8}
+        expected = [[4, 3, 6, 8, 9, 2, 7, 1, 5],
+                    [5, 8, 2, 4, 7, 1, 9, 6, 3],
+                    [9, 1, 7, 5, 6, 3, 4, 8, 2],
+                    [6, 4, 3, 1, 5, 8, 2, 9, 7],
+                    [8, 5, 9, 6, 2, 7, 1, 3, 4],
+                    [7, 2, 1, 9, 3, 4, 8, 5, 6],
+                    [3, 9, 4, 2, 8, 6, 5, 7, 1],
+                    [2, 7, 8, 3, 1, 5, 6, 4, 9],
+                    [1, 6, 5, 7, 4, 9, 3, 2, 8]]
+        self.assertEqual(solver.solve(l), expected)
 
+    def test_solve_hard_board(self):
+        """
+        This is Skiena's example of a hard Sudoku puzzle.
+        See "The Algorithm Design Manual" Chapter 7 Section 3
+        for more details.
+        """
+        l = [[0, 0, 0, 0, 0, 0, 0, 1, 2],
+             [0, 0, 0, 0, 3, 5, 0, 0, 0],
+             [0, 0, 0, 6, 0, 0, 0, 7, 0],
+             [7, 0, 0, 0, 0, 0, 3, 0, 0],
+             [0, 0, 0, 4, 0, 0, 8, 0, 0],
+             [1, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 1, 2, 0, 0, 0, 0],
+             [0, 8, 0, 0, 0, 0, 0, 4, 0],
+             [0, 5, 0, 0, 0, 0, 6, 0, 0]]
+        sol = solver.solve(l)
+        self.assertTrue(solver.is_valid(sol), sol)
 
-def test_get_unfilled_cell():
-    board = np.full((BOARD_DIM, BOARD_DIM), 1)
-    board[2, 2] = 0
-    assert gen_sol.get_unfilled_cell_rand(board) == (2, 2)
+    def test_invalid_board(self):
+        l = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 2, 1, 0, 0, 0, 0, 0, 0],
+             [0, 4, 0, 0, 0, 0, 0, 0, 0],
+             [0, 9, 0, 0, 0, 0, 0, 0, 0],
+             [0, 7, 0, 7, 0, 0, 0, 3, 0],
+             [0, 5, 0, 0, 0, 0, 0, 0, 0],
+             [0, 6, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 3, 0]]
 
+        with self.assertRaises(solver.NoSolution):
+            solver.solve(l)
 
-def test_get_unfilled_cell_all_filled():
-    board = np.full((BOARD_DIM, BOARD_DIM), 1)
-    with pytest.raises(IndexError):
-        gen_sol.get_unfilled_cell_rand(board)
+    def test_finished_board(self):
+        l = [[1, 3, 5, 2, 7, 8, 9, 6, 4],
+             [6, 8, 2, 4, 9, 5, 7, 1, 3],
+             [9, 7, 4, 3, 1, 6, 5, 2, 8],
+             [2, 6, 1, 9, 4, 7, 8, 3, 5],
+             [3, 5, 7, 6, 8, 2, 4, 9, 1],
+             [8, 4, 9, 1, 5, 3, 6, 7, 2],
+             [7, 2, 3, 5, 6, 4, 1, 8, 9],
+             [5, 9, 6, 8, 3, 1, 2, 4, 7],
+             [4, 1, 8, 7, 2, 9, 3, 5, 6]]
+        sol = solver.solve(l)
+        self.assertEqual(l, sol, sol)
 
+    def test_corrupt_board(self):
+        l = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 2, 1, 0, 0, 0, 0, 0, 0],
+             [0, 4, 0, 0, -999, 0, 0, 0, 0],
+             [0, 9, 0, 0, 0, 0, 0, 0, 0],
+             [0, 7, 0, 100, 0, 0, 0, 3, 0],
+             [0, 5, 0, 0, 0, 0, 0, 0, 0],
+             [0, 6, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 3, 0]]
+        with self.assertRaises(solver.InvalidPuzzle):
+            solver.solve(l)
 
-def test_backtrack_iter():
-    board = np.zeros((BOARD_DIM, BOARD_DIM,), dtype=int)
-    sol = gen_sol.backtrack_iter(board)
-    assert len(np.argwhere(sol == 0)) == 0
-    gen_sol.assert_board_is_valid(sol)
-
-
-def test_x_translate(board):
-    assert np.all(np.equal(tf.x_translate(board, times=3), board))
-    for n in range(3):
-        gen_sol.assert_board_is_valid(tf.x_translate(board, times=n+1))
-
-
-def test_y_translate(board):
-    assert np.all(np.equal(tf.y_translate(board, times=3), board))
-    for n in range(3):
-        gen_sol.assert_board_is_valid(tf.y_translate(board, times=n+1))
-
-
-def test_rotate(board):
-    for n in range(3):
-        gen_sol.assert_board_is_valid(tf.rotate(board, times=n+1))
-
-
-def test_mirror_x(board):
-    gen_sol.assert_board_is_valid(tf.mirror_x(board))
-
-
-def test_mirror_y(board):
-    gen_sol.assert_board_is_valid(tf.mirror_y(board))
-
-
-def test_shuff_numbers(board):
-    gen_sol.assert_board_is_valid(tf.shuffle_numbers(board))
-
-
-def test_candidates_dict(board):
-    index1, index2 = (2, 1), (3, 1)
-    orig_val1, orig_val2 = board[index1], board[index2]
-    board[index1] = 0
-    board[index2] = 0
-    candidates = dict(solve.candidates_dict(board))
-    assert index1 in candidates and index2 in candidates
-    assert (4, 1) not in candidates
-    assert candidates[index1] == {orig_val1}
-    assert candidates[index2] == {orig_val2}
-
-
-def test_remove_candidates_from_line():
-    candidates = {
-        (1, 1): {1, 2, 4, 3},
-        (1, 2): {3, 4, 5},
-        (1, 8): {2, 4, 5},
-    } 
-    lineno, n = 1, 4
-    expected = {
-        (1, 1): {1, 2, 4, 3},
-        (1, 2): {3, 5},
-        (1, 8): {2, 5},
-    }
-    solve.remove_candidates_from_line(candidates, n, lineno, except_for=[(1,1)])
-    assert candidates == expected
-
-
-def test_related_blocks():
-    assert len(solve.related_blocks()) == 18
+    def test_sparse_board(self):
+        """Will require many steps in DFS"""
+        l = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 2, 0, 0, 0, 0, 0, 0, 0],
+             [0, 4, 0, 0, 0, 0, 0, 0, 0],
+             [0, 9, 0, 0, 0, 0, 0, 0, 0],
+             [0, 7, 0, 0, 0, 0, 0, 3, 0],
+             [0, 5, 0, 0, 0, 0, 0, 0, 0],
+             [0, 6, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        sol = solver.solve(l)
+        self.assertTrue(solver.is_valid(sol), sol)
 
 
-def test_lines_in_block_pair():
-    block_pairs = [(0, 2), (1, 7), (2, 3)]
-    expected_linenos = [[0, 1, 2], [12, 13, 14], []]
-    for blocks, expected in zip(block_pairs, expected_linenos):
-        assert solve.lines_in_block_pair(*blocks) == expected
+class TestGenerate(TestCase):
+    def test_generate(self):
+        for difficulty in Difficulty:
+            puzzle, sol = g.generate(difficulty, max_retries=50)
+            self.assertTrue(solver.is_valid(puzzle), sol)
+            self.assertTrue(solver.is_valid(sol), sol)
+
+    def test_generate_max_retries(self):
+        with self.assertRaises(MaxRetriesExceeded):
+            g.generate(max_retries=0)
+
+
+class TestTransform(TestCase):
+    def setUp(self):
+        self.puzzle = [[0, 0, 0, 0, 0, 0, 0, 1, 2],
+                       [0, 0, 0, 0, 3, 5, 0, 0, 0],
+                       [0, 0, 0, 6, 0, 0, 0, 7, 0],
+                       [7, 0, 0, 0, 0, 0, 3, 0, 0],
+                       [0, 0, 0, 4, 0, 0, 8, 0, 0],
+                       [1, 0, 0, 0, 0, 0, 0, 0, 0],
+                       [0, 0, 0, 1, 2, 0, 0, 0, 0],
+                       [0, 8, 0, 0, 0, 0, 0, 4, 0],
+                       [0, 5, 0, 0, 0, 0, 6, 0, 0]]
+
+    def test_row_translate(self):
+        t1 = g.row_translate(self.puzzle)
+
+        self.assertEqual(
+            t1,
+            [[7, 0, 0, 0, 0, 0, 3, 0, 0],
+             [0, 0, 0, 4, 0, 0, 8, 0, 0],
+             [1, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 1, 2, 0, 0, 0, 0],
+             [0, 8, 0, 0, 0, 0, 0, 4, 0],
+             [0, 5, 0, 0, 0, 0, 6, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 1, 2],
+             [0, 0, 0, 0, 3, 5, 0, 0, 0],
+             [0, 0, 0, 6, 0, 0, 0, 7, 0]]
+        )
+
+        t11 = g.row_translate(t1)
+        t2 = g.row_translate(self.puzzle, times=2)
+        self.assertEqual(t11, t2)
+
+        t111 = g.row_translate(t11)
+        self.assertEqual(t111, self.puzzle)
+
