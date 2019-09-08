@@ -6,7 +6,7 @@ setup(name='sudokugen',
       url='http://github.com/g-k-l/sudoku-gen',
       author='Kevin Liu',
       author_email='kevin.g.k.liu@gmail.com',
-      license='MIT',
+      license='GNUPL',
       packages=['sudokugen'],
       zip_safe=True,
       )
